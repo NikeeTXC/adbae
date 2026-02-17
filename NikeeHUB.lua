@@ -27,7 +27,6 @@ task.spawn(function()
         local success, err = pcall(function()
             local core = game:GetService("CoreGui")
             if core:FindFirstChild("DarkDetex") or core:FindFirstChild("RemoteSpy") or core:FindFirstChild("TurtleSpy") then
-
             end
         end)
     end
@@ -134,7 +133,6 @@ local FishingAreas = {
 local Settings = {
     SecretEnabled = false,
     RubyEnabled = false,
-
     MutationCrystalized = false,
     CaveCrystalEnabled = false,
     LeaveEnabled = false,
@@ -215,26 +213,16 @@ local ShowNotification
 function ShowNotification(msg, isError)
     if not ScriptActive then return end
     Fluent:Notify({
-        Title = isError and "Error" else "Info",
+        Title = isError and "Error" or "Info",
         Content = msg,
         Duration = 3,
         Image = isError and "rbxassetid://6031288087" or "rbxassetid://6031071759"
     })
 end
 
-local TagData = {}
 local function UpdateTagData()
     if #TagList == 0 then
         for i = 1, 20 do TagList[i] = {"", ""} end
-    end
-
-    if #TagUIElements > 0 then
-        for i = 1, 20 do
-            if TagUIElements[i] then
-                TagUIElements[i].User.Text = TagList[i][1] or ""
-                TagUIElements[i].ID.Text = TagList[i][2] or ""
-            end
-        end
     end
 end
 
@@ -280,6 +268,59 @@ local statNames = {
 for _, statKey in ipairs(statOrder) do
     StatsLabels[statKey] = ServerInfoSection:AddLabel(statNames[statKey] .. ": 0")
 end
+
+-- Uptime tracking
+task.spawn(function()
+    while ScriptActive do
+        if StatsLabels["UptimeLabel"] then
+            local diff = tick() - SessionStart
+            local h = math.floor(diff / 3600)
+            local m = math.floor((diff % 3600) / 60)
+            local s = math.floor(diff % 60)
+            StatsLabels["UptimeLabel"].Text = string.format("Uptime: %02dh %02dm %02ds", h, m, s)
+        end
+        task.wait(1)
+    end
+end)
+
+local ServerTitle = "XALSCENT"
+ServerInfoSection:AddInput("ServerTitle", {Text = "Server Title", Default = ServerTitle}):OnChanged(function(v)
+    ServerTitle = v
+end)
+
+local SendStatsBtn = ServerInfoSection:AddButton("Send Stats to Admin Webhook", function()
+    if not ScriptActive then return end
+    if Current_Webhook_Admin == "" then ShowNotification("Admin Webhook Empty!", true) return end
+
+    ShowNotification("Sending Stats...", false)
+
+    local diff = tick() - SessionStart
+    local h = math.floor(diff / 3600); local m = math.floor((diff % 3600) / 60); local s = math.floor(diff % 60)
+    local timeStr = string.format("%02dh %02dm %02ds", h, m, s)
+
+    local contentStr = "📊 SERVER: " .. ServerTitle .. "\n"
+    contentStr = contentStr .. "⏱️ Uptime: " .. timeStr .. "\n"
+    contentStr = contentStr .. "📡 Total Webhooks: " .. SessionStats.TotalSent .. "\n\n"
+    contentStr = contentStr .. "⚓ Secrets: " .. SessionStats.Secret .. "\n"
+    contentStr = contentStr .. "💎 Rubies: " .. SessionStats.Ruby .. "\n"
+    contentStr = contentStr .. "🔮 Evolved: " .. SessionStats.Evolved .. "\n"
+    contentStr = contentStr .. "✨ Crystalized: " .. SessionStats.Crystalized .. "\n"
+    contentStr = contentStr .. "⛏️ Cave Crystals: " .. SessionStats.CaveCrystal
+
+    task.spawn(function()
+         local embed = {
+             ["username"] = "ITG Stats",
+             ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+             ["embeds"] = {{
+                 ["title"] = "Session Report",
+                 ["description"] = "```\n" .. contentStr .. "\n```",
+                 ["color"] = 5763719,
+                 ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+             }}
+         }
+         httpRequest({ Url = Current_Webhook_Admin, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(embed) })
+    end)
+end)
 
 -- Fhising Tab
 local FhisingSection = Tabs.Fhising:AddSection("Fishing Automation")
@@ -517,7 +558,7 @@ LeaveInput:OnChanged(function(text)
     Current_Webhook_Leave = text
 end)
 
-local ListInput = WebhookSection:AddInput("ListWebhook", {Text = "List Webhook URL", Placeholder = "Paste webhook URL here...", Numeric = false, Finished = false})
+local ListInput = WebhookSection:AddInput("ListWebhook", {Text = "Player List Webhook URL", Placeholder = "Paste webhook URL here...", Numeric = false, Finished = false})
 ListInput:OnChanged(function(text)
     Current_Webhook_List = text
 end)
@@ -564,12 +605,126 @@ end)
 -- Admin Boost Tab
 local AdminBoostSection = Tabs.AdminBoost:AddSection("Admin Boost Settings")
 
-AdminBoostSection:AddInput("AdminID1", {Text = "Admin ID 1", Placeholder = "Discord User ID", Numeric = true, Finished = false}):OnChanged(function(v)
+AdminBoostSection:AddInput("AdminID1", {Text = "Host 1 Discord ID", Placeholder = "Discord User ID", Numeric = false, Finished = false}):OnChanged(function(v)
     AdminID_1 = v
 end)
 
-AdminBoostSection:AddInput("AdminID2", {Text = "Admin ID 2", Placeholder = "Discord User ID", Numeric = true, Finished = false}):OnChanged(function(v)
+AdminBoostSection:AddInput("AdminID2", {Text = "Host 2 Discord ID", Placeholder = "Discord User ID", Numeric = false, Finished = false}):OnChanged(function(v)
     AdminID_2 = v
+end)
+
+AdminBoostSection:AddToggle("ForeignDetection", {Text = "Deteksi Player Asing", Default = false}):OnChanged(function(v)
+    Settings.ForeignDetection = v
+end)
+
+AdminBoostSection:AddToggle("SpoilerName", {Text = "Hide Player Name (Spoiler)", Default = true}):OnChanged(function(v)
+    Settings.SpoilerName = v
+end)
+
+AdminBoostSection:AddToggle("PingMonitor", {Text = "Lag Detector (Ping > 500ms)", Default = false}):OnChanged(function(v)
+    Settings.PingMonitor = v
+end)
+
+AdminBoostSection:AddToggle("LeaveEnabled", {Text = "Player Leave Server", Default = false}):OnChanged(function(v)
+    Settings.LeaveEnabled = v
+end)
+
+AdminBoostSection:AddToggle("PlayerNonPSAuto", {Text = "Player Not On Server (30 min)", Default = false}):OnChanged(function(v)
+    Settings.PlayerNonPSAuto = v
+end)
+
+-- Ping Monitor Logic
+local LastPingAlert = 0
+task.spawn(function()
+    while ScriptActive do
+        task.wait(5)
+        if Settings.PingMonitor and ScriptActive then
+             local success, ping = pcall(function() return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() end)
+             if success and ping > 500 then
+                 if tick() - LastPingAlert > 60 then
+                     LastPingAlert = tick()
+                     task.spawn(function()
+                         if Current_Webhook_Admin == "" then return end
+                         local embed = {
+                             ["username"] = "ITG Security",
+                             ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+                             ["content"] = "⚠️ **HIGH PING DETECTED!**",
+                             ["embeds"] = {{
+                                 ["title"] = "Server Lag Alert",
+                                 ["description"] = "```\nCurrent Ping: " .. math.floor(ping) .. " ms\n```",
+                                 ["color"] = 16776960,
+                                 ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+                             }}
+                         }
+                         pcall(function() httpRequest({ Url = Current_Webhook_Admin, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(embed) }) end)
+                     end)
+                 end
+             end
+        end
+    end
+end)
+
+-- Player Not On Server Check
+local function CheckAndSendNonPS(isManual)
+    if not ScriptActive then return end
+    if Current_Webhook_List == "" then
+        if isManual then ShowNotification("Webhook Missing!", true) end
+        return
+    end
+
+    if isManual then ShowNotification("Checking Players...", false) end
+
+    local current = {}
+    for _, p in ipairs(Players:GetPlayers()) do current[string.lower(p.Name)] = true end
+    local missingNames = {}; local missingTags = {}
+    for i = 1, 20 do
+        local name = TagList[i][1]; local discId = TagList[i][2]
+        if name ~= "" and not current[string.lower(name)] then
+            table.insert(missingNames, name)
+            if discId and discId ~= "" then table.insert(missingTags, "<@" .. discId .. ">") end
+        end
+    end
+
+    if not isManual and #missingNames == 0 then
+        return
+    end
+
+    local txt = "Missing Players (" .. #missingNames .. "):\n\n"
+    if #missingNames == 0 then txt = "All tagged players are in the server!" else for i, v in ipairs(missingNames) do txt = txt .. i .. ". " .. v .. "\n" end end
+
+    local contentMsg = ""
+    if #missingTags > 0 then contentMsg = " **Peringatan:** " .. table.concat(missingTags, " ") .. " belum masuk server!" end
+
+    task.spawn(function()
+        local p = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = "Player Not On Server", ["description"] = "```\n" .. txt .. "\n```", ["color"] = 16733440, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+        httpRequest({ Url = Current_Webhook_List, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
+    end)
+end
+
+AdminBoostSection:AddButton("Player On Server", function()
+    if not ScriptActive then return end
+    if Current_Webhook_List == "" then ShowNotification("Webhook Missing!", true) return end
+    ShowNotification("Sending List...", false)
+    local all = Players:GetPlayers(); local str = "Current Players (" .. #all .. "):\n\n"
+    for i, p in ipairs(all) do str = str .. i .. ". " .. p.DisplayName .. " (@" .. p.Name .. ")\n" end
+    task.spawn(function()
+        local p = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["embeds"] = {{ ["title"] = " Manual Player List", ["description"] = "```\n" .. str .. "\n```", ["color"] = 5763719, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+        httpRequest({ Url = Current_Webhook_List, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
+    end)
+end)
+
+AdminBoostSection:AddButton("Player NOT On Server", function()
+    if Current_Webhook_List == "" then ShowNotification("Webhook Player List Empty!", true) return end
+    CheckAndSendNonPS(true)
+end)
+
+task.spawn(function()
+    while ScriptActive do
+        task.wait(1800)
+        if Settings.PlayerNonPSAuto and ScriptActive then
+            CheckAndSendNonPS(false)
+        end
+    end
 end)
 
 -- List Player Tab
@@ -801,6 +956,10 @@ SettingSection:AddToggle("RemoveVFX", {Text = "Remove Skin Effect", Default = fa
     end
 end)
 
+SettingSection:AddToggle("AutoExecute", {Text = "Auto Execute on Server Hop", Default = false}):OnChanged(function(v)
+    Settings.AutoExecute = v
+end)
+
 -- Save Config Tab
 local SaveConfigSection = Tabs.SaveConfig:AddSection("Configuration Management")
 
@@ -955,10 +1114,10 @@ end
 
 AutoLoadToggle:OnChanged(function(state)
     local selected = LoadDropdown.Value
-    if not selected or selected == "" then 
-        ShowNotification("Select a config first!", true) 
+    if not selected or selected == "" then
+        ShowNotification("Select a config first!", true)
         AutoLoadToggle:SetValue(false)
-        return 
+        return
     end
 
     SaveAutoLoadPref(selected, state)
@@ -1010,6 +1169,374 @@ local function GetRemote(name)
     end
     return curr:FindFirstChild(name)
 end
+
+-- Webhook Send Function
+local function StripTags(str) return string.gsub(str, "<[^>]+>", "") end
+local function GetUsername(chatName)
+    local trimmedChatName = chatName:match("^%s*(.-)%s*$")
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.DisplayName == trimmedChatName or p.Name == trimmedChatName then
+            return p.Name
+        end
+    end
+    return trimmedChatName
+end
+
+local function ParseDataSmart(cleanMsg)
+    local msg = string.gsub(cleanMsg, "%[Server%]: ", "")
+    local p, f, w = string.match(msg, "^(.*) obtained an? (.*) %((.*)%)")
+
+    if not p then
+        p, f = string.match(msg, "^(.*) obtained an? (.*)")
+        w = "N/A"
+    end
+
+    if p and f then
+        if string.sub(f, -1) == "!" or string.sub(f, -1) == "." then
+            f = string.sub(f, 1, -2)
+        end
+
+        f = f:match("^%s*(.-)%s*$")
+
+        local mutation = nil; local finalItem = f; local lowerFullItem = string.lower(f); local allTargets = {}
+        for _, v in pairs(SecretList) do table.insert(allTargets, v) end
+        for _, v in pairs(StoneList) do table.insert(allTargets, v) end
+        table.insert(allTargets, "Evolved Enchant Stone")
+
+        for _, baseName in pairs(allTargets) do
+            if string.find(string.lower(f), string.lower(baseName) .. "$") then
+                local s, e = string.find(string.lower(f), string.lower(baseName) .. "$")
+                if s > 1 then
+                    local prefixRaw = string.sub(f, 1, s - 1); local checkMut = prefixRaw
+                    checkMut = string.gsub(checkMut, "Big%s*", ""); checkMut = string.gsub(checkMut, "Shiny%s*", "")
+                    checkMut = string.gsub(checkMut, "Sparkling%s*", ""); checkMut = string.gsub(checkMut, "Giant%s*", "")
+                    checkMut = string.gsub(checkMut, "^%s*(.-)%s*$", "%1")
+                    if checkMut == "" then mutation = nil; finalItem = f
+                    else mutation = checkMut; finalItem = string.gsub(f, prefixRaw, ""); finalItem = string.gsub(finalItem, "^%s*(.-)%s*$", "%1") end
+                else mutation = nil; finalItem = f end
+                break
+            end
+        end
+        return { Player = p, Item = finalItem, Mutation = mutation, Weight = w }
+    end
+    return nil
+end
+
+local function SendWebhook(data, category)
+    if not ScriptActive then return end
+    if category == "SECRET" and not Settings.SecretEnabled then return end
+    if category == "STONE" and not Settings.RubyEnabled then return end
+    if category == "EVOLVED" and not Settings.EvolvedEnabled then return end
+    if category == "CRYSTALIZED" and not Settings.MutationCrystalized then return end
+    if category == "CAVECRYSTAL" and not Settings.CaveCrystalEnabled then return end
+    if category == "LEAVE" and not Settings.LeaveEnabled then return end
+    local TargetURL = ""; local contentMsg = ""; local realUser = GetUsername(data.Player)
+    local discordId = nil
+    for i = 1, 20 do if TagList[i][1] ~= "" and string.lower(TagList[i][1]) == string.lower(realUser) then discordId = TagList[i][2]; break end end
+    if discordId and discordId ~= "" then if category == "LEAVE" then contentMsg = "User Left: <@" .. discordId .. ">" else contentMsg = "GG! <@" .. discordId .. ">" end end
+    if category == "LEAVE" then TargetURL = Current_Webhook_Leave elseif category == "PLAYERS" then TargetURL = Current_Webhook_List else TargetURL = Current_Webhook_Fish end
+    if not TargetURL or TargetURL == "" or string.find(TargetURL, "MASUKKAN_URL") then return end
+    local embedTitle = ""; local embedColor = 3447003; local descriptionText = ""
+    local pName = Settings.SpoilerName and ("||`" .. data.Player .. "`||") or ("`" .. data.Player .. "`")
+    if category == "SECRET" then
+        SessionStats.Secret = SessionStats.Secret + 1
+        embedTitle = "Secret Caught!"
+        embedColor = 3447003; local lines = { "⚓ Fish: " .. data.Item }
+        if data.Mutation and data.Mutation ~= "None" then table.insert(lines, "🧬 Mutation: " .. data.Mutation) end
+        table.insert(lines, "⚖️ Weight: " .. data.Weight); descriptionText = "Player: " .. pName .. "\n\n```\n" .. table.concat(lines, "\n") .. "\n```"
+    elseif category == "STONE" then
+        SessionStats.Ruby = SessionStats.Ruby + 1
+        embedTitle = "Ruby Gemstone!"
+        embedColor = 16753920; local lines = { "💎 Stone: " .. data.Item }
+        if data.Mutation and data.Mutation ~= "None" then table.insert(lines, "✨ Mutation: " .. data.Mutation) end
+        table.insert(lines, "⚖️ Weight: " .. data.Weight); descriptionText = "Player: " .. pName .. "\n\n```\n" .. table.concat(lines, "\n") .. "\n```"
+    elseif category == "EVOLVED" then
+        SessionStats.Evolved = SessionStats.Evolved + 1
+        embedTitle = "Evolved Stone!"
+        embedColor = 10181046
+        local lines = { "🔮 Item: " .. data.Item }
+        descriptionText = "Player: " .. pName .. "\n\n```\n" .. table.concat(lines, "\n") .. "\n```"
+    elseif category == "CRYSTALIZED" then
+        SessionStats.Crystalized = SessionStats.Crystalized + 1
+        embedTitle = "CRYSTALIZED MUTATION!"
+        embedColor = 3407871
+        local lines = { "💎 Fish: " .. data.Item }
+        table.insert(lines, "✨ Mutation: Crystalized")
+        table.insert(lines, "⚖️ Weight: " .. data.Weight)
+        descriptionText = "Player: " .. pName .. "\n\n```\n" .. table.concat(lines, "\n") .. "\n```"
+    elseif category == "LEAVE" then
+        local dispName = data.DisplayName or data.Player; embedTitle = dispName .. " Left the server."; embedColor = 16711680; descriptionText = "👤 **@" .. data.Player .. "**"
+    elseif category == "PLAYERS" then
+        embedTitle = "👥 List Player In Server"; embedColor = 5763719; descriptionText = "Information\n" .. data.ListText
+    elseif category == "CAVECRYSTAL" then
+        SessionStats.CaveCrystal = SessionStats.CaveCrystal + 1
+        embedTitle = "💎 Cave Crystal Event!"; embedColor = 16776960; descriptionText = "Information\n" .. data.ListText
+    end
+
+    SessionStats.TotalSent = SessionStats.TotalSent + 1
+    
+    -- Update UI stats
+    for key, val in pairs(SessionStats) do
+        if StatsLabels[key] then
+            StatsLabels[key].Text = statNames[key] .. ": " .. tostring(val)
+        end
+    end
+
+    local embedData = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = embedTitle, ["description"] = descriptionText, ["color"] = embedColor, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+    pcall(function() httpRequest({ Url = TargetURL, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = HttpService:JSONEncode(embedData) }) end)
+end
+
+local function CheckAndSend(msg)
+    if not ScriptActive then return end
+    local cleanMsg = StripTags(msg); local lowerMsg = string.lower(cleanMsg)
+
+    if string.find(lowerMsg, "evolved enchant stone") then
+        local tempMsg = string.gsub(cleanMsg, "^%[Server%]:%s*", "")
+        local p = string.match(tempMsg, "^(.*) obtained an?")
+        if p then
+            p = p:match("^%s*(.-)%s*$")
+        else
+            p = "Unknown Player"
+        end
+
+        local data = { Player = p, Item = "Evolved Enchant Stone", Mutation = "None", Weight = "N/A" }
+        SendWebhook(data, "EVOLVED")
+        return
+    end
+
+    if string.find(lowerMsg, "crystalized") then
+        local tempMsg = string.gsub(cleanMsg, "^%[Server%]:%s*", "")
+        local p, item_full, w = string.match(tempMsg, "^(.*) obtained an? (.*) %((.*)%)")
+        if not p then
+             p, item_full = string.match(tempMsg, "^(.*) obtained an? (.*)")
+             w = "N/A"
+        end
+
+        if p and item_full then
+             local finalItem = item_full
+             local s, e = string.find(string.lower(item_full), "crystalized")
+             if s then
+                 finalItem = string.sub(item_full, e + 1)
+                 finalItem = string.gsub(finalItem, "^%s+", "")
+             end
+
+             local check = string.lower(finalItem)
+             local allowed = {"bioluminescent octopus", "blossom jelly", "cute dumbo", "star snail", "blue sea dragon"}
+             local isAllowed = false
+             for _, v in ipairs(allowed) do if string.find(check, v) then isAllowed = true; break end end
+
+             if isAllowed then
+                 local data = { Player = p, Item = finalItem, Mutation = "Crystalized", Weight = w }
+                 SendWebhook(data, "CRYSTALIZED")
+                 return
+             end
+        end
+    end
+
+    if string.find(lowerMsg, "obtained an?") or string.find(lowerMsg, "chance!") then
+        local data = ParseDataSmart(cleanMsg)
+        if data then
+            if data.Mutation and string.find(string.lower(data.Mutation), "crystalized") then
+                SendWebhook(data, "CRYSTALIZED")
+                return
+            end
+
+            if string.find(string.lower(data.Item), "evolved enchant stone") then
+                SendWebhook(data, "EVOLVED")
+                return
+            end
+
+            for _, name in pairs(StoneList) do
+                if string.find(string.lower(data.Item), string.lower(name)) then
+                    if string.find(string.lower(data.Item), "ruby") then
+                        if data.Mutation and string.find(string.lower(data.Mutation), "gemstone") then SendWebhook(data, "STONE") end
+                    else SendWebhook(data, "STONE") end
+                    return
+                end
+            end
+            for _, name in pairs(SecretList) do if string.find(string.lower(data.Item), string.lower(name)) then SendWebhook(data, "SECRET") return end end
+        end
+    end
+end
+
+-- Chat listeners
+if TextChatService then
+    TextChatService.OnIncomingMessage = function(m)
+        if not ScriptActive then return end
+        if m.TextSource == nil then CheckAndSend(m.Text) end
+    end
+end
+
+local ChatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
+if ChatEvents then
+    local OnMessage = ChatEvents:WaitForChild("OnMessageDoneFiltering", 3)
+    if OnMessage then
+        table.insert(Connections, OnMessage.OnClientEvent:Connect(function(d)
+            if not ScriptActive then return end
+            if d and d.Message then CheckAndSend(d.Message) end
+        end))
+    end
+end
+
+-- Player leave/join listeners
+table.insert(Connections, Players.PlayerRemoving:Connect(function(p)
+    if not ScriptActive then return end
+    task.spawn(function() SendWebhook({ Player = p.Name, DisplayName = p.DisplayName }, "LEAVE") end)
+end))
+
+table.insert(Connections, Players.PlayerAdded:Connect(function(p)
+    if not ScriptActive then return end
+    if Settings.ForeignDetection then
+        local isWhitelisted = false
+        local checkName = string.lower(p.Name)
+
+        for i = 1, 20 do
+             local wlName = TagList[i][1] or ""
+             if wlName ~= "" and string.lower(wlName) == checkName then
+                 isWhitelisted = true
+                 break
+             end
+        end
+
+        if not isWhitelisted then
+            task.spawn(function()
+                 if Current_Webhook_Admin == "" then return end
+                 local adminTags = ""
+
+                 local id1 = (TagList[1] and TagList[1][2]) or ""
+                 local id2 = (TagList[2] and TagList[2][2]) or ""
+
+                 if id1 ~= "" then adminTags = adminTags .. "<@" .. id1 .. "> " end
+                 if id2 ~= "" then adminTags = adminTags .. "<@" .. id2 .. "> " end
+
+                 local contentStr = "Foreign Player Detected!" .. adminTags
+                 local embed = {
+                    ["username"] = "ITG Security",
+                    ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+                    ["content"] = contentStr,
+                    ["embeds"] = {{
+                        ["title"] = "Player Information",
+                        ["description"] = "```\nName: " .. p.DisplayName .. "\nUsername: " .. p.Name .. "\n```",
+                        ["color"] = 16711680,
+                        ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+                    }}
+                 }
+                 pcall(function()
+                    httpRequest({
+                        Url = Current_Webhook_Admin,
+                        Method = "POST",
+                        Headers = {["Content-Type"]="application/json"},
+                        Body = HttpService:JSONEncode(embed)
+                    })
+                 end)
+            end)
+        end
+    end
+end))
+
+-- Disconnect and Rejoin System
+local targetPlaceId = game.PlaceId
+local targetJobId = game.JobId
+local function FastInfiniteRejoin()
+    if not ScriptActive then return end
+    print("🔄 ITG: Mencoba reconnect setiap 5 detik...")
+    while ScriptActive do
+        local success, err = pcall(function() TeleportService:TeleportToPlaceInstance(targetPlaceId, targetJobId, game.Players.LocalPlayer) end)
+        if success then print("✅ ITG: Perintah reconnect berhasil dikirim!") break else warn("⚠️ ITG: Gagal, mencoba lagi dalam 5 detik...") end
+        task.wait(5)
+    end
+end
+
+local function SendDisconnectWebhook(reason)
+    if not ScriptActive then return end
+    if Current_Webhook_List == "" then return end
+    if tick() - LastDisconnectTime < 30 then
+        print("⚠️ ITG: Disconnect Webhook Cooldown Active")
+        return
+    end
+    LastDisconnectTime = tick()
+
+    print("⚠️ ITG: Sending Disconnect Webhook (Reason: " .. tostring(reason) .. ")")
+
+    local adminTags = ""
+    local id1 = (TagList[1] and TagList[1][2]) or ""
+    local id2 = (TagList[2] and TagList[2][2]) or ""
+
+    if id1 ~= "" then adminTags = adminTags .. "<@" .. id1 .. "> " end
+    if id2 ~= "" then adminTags = adminTags .. "<@" .. id2 .. "> " end
+
+    local contentMsg = ""
+    if adminTags ~= "" then
+        contentMsg = "**DISCONNECT ALERT:** " .. adminTags
+    end
+
+    local embed = {
+        ["username"] = "ITG",
+        ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+        ["content"] = contentMsg,
+        ["embeds"] = {{
+            ["title"] = "LocalPlayer Disconnected",
+            ["description"] = "Information\nUser: **" .. Players.LocalPlayer.Name .. "** (@" .. Players.LocalPlayer.DisplayName .. ") has disconnected.\n**Reason:** " .. tostring(reason),
+            ["color"] = 16711680,
+            ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+        }}
+    }
+
+    pcall(function()
+        httpRequest({
+            Url = Current_Webhook_List,
+            Method = "POST",
+            Headers = {["Content-Type"]="application/json"},
+            Body = HttpService:JSONEncode(embed)
+        })
+    end)
+end
+
+table.insert(Connections, GuiService.ErrorMessageChanged:Connect(function(errMsg)
+    if not ScriptActive then return end
+    if errMsg and errMsg ~= "" then
+        SendDisconnectWebhook("Error Message: " .. errMsg)
+    end
+    task.wait(2); FastInfiniteRejoin()
+end))
+
+local promptOverlay = game:GetService("CoreGui"):WaitForChild("RobloxPromptGui", 5)
+if promptOverlay then
+    promptOverlay = promptOverlay:WaitForChild("promptOverlay", 5)
+end
+
+if promptOverlay then
+    table.insert(Connections, promptOverlay.ChildAdded:Connect(function(child)
+        if not ScriptActive then return end
+        if child.Name == "ErrorPrompt" then
+            SendDisconnectWebhook("Error Prompt Detected")
+            task.wait(2); FastInfiniteRejoin()
+        end
+    end))
+end
+
+game:BindToClose(function()
+    SendDisconnectWebhook("Script/Game Closed Gracefully")
+    task.wait(1)
+end)
+
+-- Cave Crystal Watcher
+local CaveCrystalDebounce = 0
+local function StartInventoryWatcher()
+    local Backpack = Players.LocalPlayer:WaitForChild("Backpack", 10)
+    if not Backpack then return end
+
+    table.insert(Connections, Backpack.ChildAdded:Connect(function(child)
+        if not ScriptActive then return end
+        if child.Name == "Cave Crystal" then
+             if tick() - CaveCrystalDebounce > 10 then
+                 CaveCrystalDebounce = tick()
+                 SendWebhook({ Player = Players.LocalPlayer.Name, ListText = "⛏️ **Found a Cave Crystal!**" }, "CAVECRYSTAL")
+             end
+        end
+    end))
+end
+task.spawn(StartInventoryWatcher)
 
 -- Show window
 Window:SelectTab(1)
