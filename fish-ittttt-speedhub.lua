@@ -4,11 +4,19 @@
 -- ============================================
 
 -- Load SpeedHub UI Library
-local SpeedHubUI = loadstring(readfile("SpeedHubUI"))()
+local SpeedHubUI = nil
+
+-- Coba berbagai cara untuk load library
+if isfile("SpeedHubUI") then
+    SpeedHubUI = loadstring(readfile("SpeedHubUI"))()
+elseif isfile("SpeedHubUI.lua") then
+    SpeedHubUI = loadstring(readfile("SpeedHubUI.lua"))()
+end
 
 if not SpeedHubUI then
     warn("SpeedHubUI library not found!")
-    return
+    -- Fallback: embed library langsung
+    SpeedHubUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/SpeedHubUI/main/SpeedHubUI.lua"))()
 end
 
 -- Services
