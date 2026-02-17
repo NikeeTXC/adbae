@@ -56,155 +56,24 @@ if getgenv then
     getgenv().XAL_Stop = CleanupScript
 end
 
-if not isfolder("XAL_Configs") then
+if not isfolder("XAL_Configs") then 
     pcall(function() makefolder("XAL_Configs") end)
 end
 
--- ============================================
--- UI LIBRARY (From UI/MainUi.lua)
--- ============================================
-
-local Icons = {
-    Nt = "rbxassetid://84946340265305", lexshub = "rbxassetid://71947103252559", player = "rbxassetid://12120698352",
-    web = "rbxassetid://137601480983962", bag = "rbxassetid://8601111810", shop = "rbxassetid://4985385964",
-    cart = "rbxassetid://128874923961846", plug = "rbxassetid://137601480983962", settings = "rbxassetid://70386228443175",
-    loop = "rbxassetid://122032243989747", gps = "rbxassetid://17824309485", compas = "rbxassetid://125300760963399",
-    gamepad = "rbxassetid://84173963561612", boss = "rbxassetid://13132186360", scroll = "rbxassetid://114127804740858",
-    menu = "rbxassetid://6340513838", crosshair = "rbxassetid://12614416478", user = "rbxassetid://108483430622128",
-    stat = "rbxassetid://12094445329", eyes = "rbxassetid://14321059114", sword = "rbxassetid://82472368671405",
-    discord = "rbxassetid://94434236999817", star = "rbxassetid://107005941750079", skeleton = "rbxassetid://17313330026",
-    payment = "rbxassetid://18747025078", scan = "rbxassetid://109869955247116", alert = "rbxassetid://73186275216515",
-    question = "rbxassetid://17510196486", idea = "rbxassetid://16833255748", strom = "rbxassetid://13321880293",
-    water = "rbxassetid://100076212630732", dcs = "rbxassetid://15310731934", start = "rbxassetid://108886429866687",
-    next = "rbxassetid://12662718374", rod = "rbxassetid://103247953194129", fish = "rbxassetid://97167558235554",
+local Theme = {
+    Background = Color3.fromRGB(20, 22, 28),
+    Header = Color3.fromRGB(25, 28, 35),
+    Sidebar = Color3.fromRGB(18, 20, 25),
+    Content = Color3.fromRGB(22, 24, 30),
+    Accent = Color3.fromRGB(0, 139, 139), 
+    AccentHover = Color3.fromRGB(0, 160, 160), 
+    TextPrimary = Color3.fromRGB(240, 240, 240),
+    TextSecondary = Color3.fromRGB(160, 165, 175),
+    Border = Color3.fromRGB(45, 50, 60),
+    Input = Color3.fromRGB(15, 16, 20),
+    Success = Color3.fromRGB(75, 185, 115),
+    Error = Color3.fromRGB(235, 85, 85)
 }
-
-local viewport = workspace.CurrentCamera.ViewportSize
-local function isMobileDevice()
-    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
-end
-local isMobile = isMobileDevice()
-
-local function safeSize(pxWidth, pxHeight)
-    local scaleX = pxWidth / viewport.X
-    local scaleY = pxHeight / viewport.Y
-    if isMobile then if scaleX > 0.5 then scaleX = 0.5 end; if scaleY > 0.3 then scaleY = 0.3 end end
-    return UDim2.new(scaleX, 0, scaleY, 0)
-end
-
-local function MakeDraggable(topbarobject, object)
-    local Dragging, DragInput, DragStart, StartPosition
-    local function UpdatePos(input)
-        local Delta = input.Position - DragStart
-        local pos = UDim2.new(StartPosition.X.Scale, StartPosition.X.Offset + Delta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + Delta.Y)
-        TweenService:Create(object, TweenInfo.new(0.2), { Position = pos }):Play()
-    end
-    topbarobject.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            Dragging = true; DragStart = input.Position; StartPosition = object.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then Dragging = false end end)
-        end
-    end)
-    topbarobject.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then DragInput = input end end)
-    UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then UpdatePos(input) end end)
-end
-
-local function CircleClick(Button, X, Y)
-    spawn(function()
-        Button.ClipsDescendants = true
-        local Circle = Instance.new("ImageLabel")
-        Circle.Image = "rbxassetid://266543268"; Circle.ImageColor3 = Color3.fromRGB(80, 80, 80); Circle.ImageTransparency = 0.9
-        Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Circle.BackgroundTransparency = 1; Circle.ZIndex = 10; Circle.Name = "Circle"; Circle.Parent = Button
-        local NewX = X - Circle.AbsolutePosition.X; local NewY = Y - Circle.AbsolutePosition.Y
-        Circle.Position = UDim2.new(0, NewX, 0, NewY)
-        local Size = math.max(Button.AbsoluteSize.X, Button.AbsoluteSize.Y) * 1.5
-        Circle:TweenSizeAndPosition(UDim2.new(0, Size, 0, Size), UDim2.new(0.5, -Size/2, 0.5, -Size/2), "Out", "Quad", 0.5, false, nil)
-        for i = 1, 10 do Circle.ImageTransparency = Circle.ImageTransparency + 0.01; wait(0.05) end
-        Circle:Destroy()
-    end)
-end
-
-local Chloex = {}
-function Chloex:MakeNotify(NotifyConfig)
-    NotifyConfig = NotifyConfig or {}
-    NotifyConfig.Title = NotifyConfig.Title or "NikeeBAY"
-    NotifyConfig.Description = NotifyConfig.Description or "Notification"
-    NotifyConfig.Content = NotifyConfig.Content or "Content"
-    NotifyConfig.Color = NotifyConfig.Color or Color3.fromRGB(0, 139, 139)
-    NotifyConfig.Time = NotifyConfig.Time or 0.5
-    NotifyConfig.Delay = NotifyConfig.Delay or 5
-    local NotifyFunction = {}
-    spawn(function()
-        if not CoreGui:FindFirstChild("NotifyGui") then
-            local NotifyGui = Instance.new("ScreenGui"); NotifyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; NotifyGui.Name = "NotifyGui"; NotifyGui.Parent = CoreGui
-        end
-        if not CoreGui.NotifyGui:FindFirstChild("NotifyLayout") then
-            local NotifyLayout = Instance.new("Frame")
-            NotifyLayout.AnchorPoint = Vector2.new(1, 1); NotifyLayout.BackgroundColor3 = Color3.fromRGB(255, 255, 255); NotifyLayout.BackgroundTransparency = 0.999
-            NotifyLayout.BorderColor3 = Color3.fromRGB(0, 0, 0); NotifyLayout.BorderSizePixel = 0
-            NotifyLayout.Position = UDim2.new(1, -30, 1, -30); NotifyLayout.Size = UDim2.new(0, 320, 1, 0)
-            NotifyLayout.Name = "NotifyLayout"; NotifyLayout.Parent = CoreGui.NotifyGui
-            local Count = 0
-            CoreGui.NotifyGui.NotifyLayout.ChildRemoved:Connect(function()
-                Count = 0
-                for i, v in CoreGui.NotifyGui.NotifyLayout:GetChildren() do
-                    TweenService:Create(v, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { Position = UDim2.new(0, 0, 1, -((v.Size.Y.Offset + 12) * Count)) }):Play()
-                    Count = Count + 1
-                end
-            end)
-        end
-        local NotifyPosHeigh = 0
-        for i, v in CoreGui.NotifyGui.NotifyLayout:GetChildren() do NotifyPosHeigh = -(v.Position.Y.Offset) + v.Size.Y.Offset + 12 end
-        local NotifyFrame = Instance.new("Frame"); local NotifyFrameReal = Instance.new("Frame")
-        NotifyFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0); NotifyFrame.BorderSizePixel = 0; NotifyFrame.Size = UDim2.new(1, 0, 0, 150)
-        NotifyFrame.Name = "NotifyFrame"; NotifyFrame.BackgroundTransparency = 1; NotifyFrame.Parent = CoreGui.NotifyGui.NotifyLayout
-        NotifyFrame.AnchorPoint = Vector2.new(0, 1); NotifyFrame.Position = UDim2.new(0, 0, 1, -(NotifyPosHeigh))
-        NotifyFrameReal.BackgroundColor3 = Color3.fromRGB(0, 0, 0); NotifyFrameReal.BorderSizePixel = 0
-        NotifyFrameReal.Position = UDim2.new(0, 400, 0, 0); NotifyFrameReal.Size = UDim2.new(1, 0, 1, 0); NotifyFrameReal.Name = "NotifyFrameReal"; NotifyFrameReal.Parent = NotifyFrame
-        local UICorner = Instance.new("UICorner"); UICorner.CornerRadius = UDim.new(0, 8); UICorner.Parent = NotifyFrameReal
-        local DropShadowHolder = Instance.new("Frame"); DropShadowHolder.BackgroundTransparency = 1; DropShadowHolder.BorderSizePixel = 0
-        DropShadowHolder.Size = UDim2.new(1, 0, 1, 0); DropShadowHolder.ZIndex = 0; DropShadowHolder.Name = "DropShadowHolder"; DropShadowHolder.Parent = NotifyFrameReal
-        local Top = Instance.new("Frame"); Top.BackgroundColor3 = Color3.fromRGB(0, 0, 0); Top.BackgroundTransparency = 0.999
-        Top.BorderSizePixel = 0; Top.Size = UDim2.new(1, 0, 0, 36); Top.Name = "Top"; Top.Parent = NotifyFrameReal
-        local TextLabel = Instance.new("TextLabel"); TextLabel.Font = Enum.Font.GothamBold; TextLabel.Text = NotifyConfig.Title
-        TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TextLabel.TextSize = 14; TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-        TextLabel.BackgroundTransparency = 1; TextLabel.Size = UDim2.new(1, 0, 1, 0); TextLabel.Position = UDim2.new(0, 10, 0, 0); TextLabel.Parent = Top
-        local TextLabel1 = Instance.new("TextLabel"); TextLabel1.Font = Enum.Font.GothamBold; TextLabel1.Text = NotifyConfig.Description
-        TextLabel1.TextColor3 = NotifyConfig.Color; TextLabel1.TextSize = 14; TextLabel1.TextXAlignment = Enum.TextXAlignment.Left
-        TextLabel1.BackgroundTransparency = 1; TextLabel1.Size = UDim2.new(1, 0, 1, 0); TextLabel1.Position = UDim2.new(0, TextLabel.TextBounds.X + 15, 0, 0); TextLabel1.Parent = Top
-        local Close = Instance.new("TextButton"); Close.Font = Enum.Font.SourceSans; Close.Text = ""
-        Close.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Close.BackgroundTransparency = 0.999; Close.BorderSizePixel = 0
-        Close.Position = UDim2.new(1, -5, 0.5, 0); Close.Size = UDim2.new(0, 25, 0, 25); Close.Name = "Close"; Close.Parent = Top
-        local ImageLabel = Instance.new("ImageLabel"); ImageLabel.Image = "rbxassetid://9886659671"
-        ImageLabel.AnchorPoint = Vector2.new(0.5, 0.5); ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255); ImageLabel.BackgroundTransparency = 0.999
-        ImageLabel.BorderSizePixel = 0; ImageLabel.Position = UDim2.new(0.49, 0, 0.5, 0); ImageLabel.Size = UDim2.new(1, -8, 1, -8); ImageLabel.Parent = Close
-        local TextLabel2 = Instance.new("TextLabel"); TextLabel2.Font = Enum.Font.GothamBold; TextLabel2.TextColor3 = Color3.fromRGB(255, 255, 255)
-        TextLabel2.TextSize = 13; TextLabel2.Text = NotifyConfig.Content; TextLabel2.TextXAlignment = Enum.TextXAlignment.Left; TextLabel2.TextYAlignment = Enum.TextYAlignment.Top
-        TextLabel2.BackgroundTransparency = 1; TextLabel2.Position = UDim2.new(0, 10, 0, 27); TextLabel2.Parent = NotifyFrameReal
-        TextLabel2.Size = UDim2.new(1, -20, 0, 13 + (13 * (TextLabel2.TextBounds.X // TextLabel2.AbsoluteSize.X))); TextLabel2.TextWrapped = true
-        if TextLabel2.AbsoluteSize.Y < 27 then NotifyFrame.Size = UDim2.new(1, 0, 0, 65) else NotifyFrame.Size = UDim2.new(1, 0, 0, TextLabel2.AbsoluteSize.Y + 40) end
-        local waitbruh = false
-        function NotifyFunction:Close()
-            if waitbruh then return false end; waitbruh = true
-            TweenService:Create(NotifyFrameReal, TweenInfo.new(tonumber(NotifyConfig.Time), Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { Position = UDim2.new(0, 400, 0, 0) }):Play()
-            task.wait(tonumber(NotifyConfig.Time) / 1.2); NotifyFrame:Destroy()
-        end
-        Close.Activated:Connect(function() NotifyFunction:Close() end)
-        TweenService:Create(NotifyFrameReal, TweenInfo.new(tonumber(NotifyConfig.Time), Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { Position = UDim2.new(0, 0, 0, 0) }):Play()
-        task.wait(tonumber(NotifyConfig.Delay)); NotifyFunction:Close()
-    end)
-    return NotifyFunction
-end
-
-function Nt(msg, delay, color, title, desc)
-    return Chloex:MakeNotify({ Title = title or "NikeeBAY", Description = desc or "Notification", Content = msg or "Content", Color = color or Color3.fromRGB(0, 139, 139), Delay = delay or 4 })
-end
-
--- Override ShowNotification to use new UI
-local OldShowNotification = ShowNotification
-ShowNotification = function(msg, isError)
-    Nt(msg, 4, isError and Color3.fromRGB(235, 85, 85) or Color3.fromRGB(0, 139, 139), isError and "Error" or "Info", msg)
-end
 
 local Current_Webhook_Fish = ""
 local Current_Webhook_Leave = ""
@@ -302,7 +171,7 @@ end)
 
 task.spawn(function()
     local success, err = pcall(function()
-        local queueTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (request and request.queue_on_teleport)
+        local queueTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
         
         if queueTeleport then
             local TpService = game:GetService("TeleportService")
@@ -364,96 +233,598 @@ local function UpdateTagData()
     end
 end
 
-UpdateTagData()
+UpdateTagData() 
 
--- Cleanup old UI
 local oldUI = CoreGui:FindFirstChild(SafeName) or CoreGui:FindFirstChild("XAL_System")
 if oldUI then oldUI:Destroy() task.wait(0.1) end
-if CoreGui:FindFirstChild("Chloeex") then CoreGui.Chloeex:Destroy() end
-if CoreGui:FindFirstChild("NotifyGui") then CoreGui.NotifyGui:Destroy() end
-if CoreGui:FindFirstChild("ToggleUIButton") then CoreGui.ToggleUIButton:Destroy() end
 
--- ============================================
--- CREATE MAIN WINDOW (Using Chloex UI)
--- ============================================
+ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = SafeName
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local Window = Chloex:Window({ Title = "ITG Webhook", Footer = "NikeeBAY", Color = Color3.fromRGB(0, 139, 139), Image = "rbxassetid://108886429866687" })
+pcall(function() 
+    ProtectGui(ScreenGui) 
+end)
+if not ScreenGui.Parent then ScreenGui.Parent = CoreGui end
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Create Tabs
-local Page_SessionStats = Window:AddTab({ Name = "Server Info", Icon = "stat" })
-local Page_Fhising = Window:AddTab({ Name = "Fhising", Icon = "fish" })
-local Page_Teleport = Window:AddTab({ Name = "Teleport", Icon = "gps" })
-local Page_Webhook = Window:AddTab({ Name = "Notification", Icon = "web" })
-local Page_AdminBoost = Window:AddTab({ Name = "Admin Boost", Icon = "boss" })
-local Page_Tag = Window:AddTab({ Name = "List Player", Icon = "player" })
-local Page_Setting = Window:AddTab({ Name = "Setting", Icon = "settings" })
-local Page_Save = Window:AddTab({ Name = "Save Config", Icon = "bag" })
+local function AddStroke(instance, color, thickness)
+    local s = Instance.new("UIStroke", instance)
+    s.Color = color or Theme.Border
+    s.Thickness = thickness or 1
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    return s
+end
 
--- Create Sections for each tab
-local SessionStatsSection = Page_SessionStats:AddSection("Session Statistics", true)
-local FhisingSection = Page_Fhising:AddSection("Fishing Features", true)
-local TeleportSection = Page_Teleport:AddSection("Teleport Locations", true)
-local WebhookNotifSection = Page_Webhook:AddSection("Notification Settings", true)
-local WebhookURLSection = Page_Webhook:AddSection("Webhook URLs", false)
-local AdminBoostSection = Page_AdminBoost:AddSection("Admin Features", true)
-local TagSection = Page_Tag:AddSection("Player List", true)
-local SettingSection = Page_Setting:AddSection("General Settings", true)
-local SaveConfigSection = Page_Save:AddSection("Configuration", true)
+local function AddPadding(instance, amount)
+    local p = Instance.new("UIPadding", instance)
+    p.PaddingLeft = UDim.new(0, amount)
+    p.PaddingRight = UDim.new(0, amount)
+    p.PaddingTop = UDim.new(0, amount)
+    p.PaddingBottom = UDim.new(0, amount)
+    return p
+end
 
--- Helper functions for creating UI elements
-local ToggleRegistry = {}
-local UI_StatsLabels = {}
-local UI_FishInput, UI_LeaveInput, UI_ListInput, UI_AdminInput
+function ShowNotification(msg, isError)
+    if not ScriptActive then return end
+    local NotifFrame = Instance.new("Frame", ScreenGui)
+    NotifFrame.BackgroundColor3 = Theme.Background
+    NotifFrame.BorderSizePixel = 0
+    NotifFrame.Position = UDim2.new(0.5, -110, 0.1, 0)
+    NotifFrame.Size = UDim2.new(0, 220, 0, 40)
+    NotifFrame.ZIndex = 200
+    
+    Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
+    AddStroke(NotifFrame, isError and Theme.Error or Theme.Accent, 1.5)
+    
+    local Icon = Instance.new("Frame", NotifFrame) 
+    Icon.BackgroundColor3 = isError and Theme.Error or Theme.Accent
+    Icon.Size = UDim2.new(0, 4, 1, -10)
+    Icon.Position = UDim2.new(0, 8, 0.5, -((40-10)/2))
+    Instance.new("UICorner", Icon).CornerRadius = UDim.new(1,0)
 
-local function CreateToggle(parentSection, text, settingKey, callback, validationFunc)
-    parentSection:AddToggle({
-        Title = text,
-        Content = "",
-        Default = Settings[settingKey] or false,
-        Callback = function(state)
-            if validationFunc and not validationFunc() then ShowNotification("Webhook Empty!", true); return end
-            Settings[settingKey] = state
-            if callback then callback(state) end
-            ShowNotification(text .. (state and " Enabled" or " Disabled"))
+    local Label = Instance.new("TextLabel", NotifFrame)
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 20, 0, 0)
+    Label.Size = UDim2.new(1, -25, 1, 0)
+    Label.Font = Enum.Font.GothamMedium
+    Label.Text = msg
+    Label.TextColor3 = Theme.TextPrimary
+    Label.TextSize = 13
+    Label.ZIndex = 201
+    
+    NotifFrame.BackgroundTransparency = 1
+    Label.TextTransparency = 1
+    Icon.BackgroundTransparency = 1
+    
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(Label, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    TweenService:Create(Icon, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -110, 0.15, 0)}):Play()
+    
+    task.delay(2.5, function()
+        if NotifFrame then
+            TweenService:Create(NotifFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1, Position = UDim2.new(0.5, -110, 0.1, 0)}):Play()
+            TweenService:Create(Label, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+            TweenService:Create(Icon, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+            task.wait(0.3)
+            NotifFrame:Destroy()
         end
-    })
+    end)
 end
 
-local function CreateInput(parentSection, placeholder, default, callback, height)
-    local inputFunc = parentSection:AddInput({
-        Title = placeholder,
-        Content = "",
-        Placeholder = "Paste here...",
-        Default = default,
-        Callback = function(v) callback(v) end
-    })
-    return inputFunc
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.BackgroundColor3 = Theme.Background
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -140) 
+MainFrame.Size = UDim2.new(0, 480, 0, 300) 
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = false 
+MainFrame.BorderSizePixel = 0
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+AddStroke(MainFrame, Theme.Border, 1)
+
+local Shadow = Instance.new("ImageLabel", MainFrame)
+Shadow.Name = "Shadow"
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.BackgroundTransparency = 1
+Shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+Shadow.Size = UDim2.new(1, 60, 1, 60)
+Shadow.ZIndex = -1
+Shadow.Image = "rbxassetid://6014261993"
+Shadow.ImageColor3 = Color3.new(0, 0, 0)
+Shadow.ImageTransparency = 0.4
+Shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceScale = 1
+
+local Header = Instance.new("Frame", MainFrame)
+Header.BackgroundColor3 = Theme.Header
+Header.Size = UDim2.new(1, 0, 0, 36) 
+Header.BorderSizePixel = 0
+Header.ZIndex = 5
+local HeaderCorner = Instance.new("UICorner", Header)
+HeaderCorner.CornerRadius = UDim.new(0, 8)
+
+local HeaderSquare = Instance.new("Frame", Header)
+HeaderSquare.BackgroundColor3 = Theme.Header
+HeaderSquare.BorderSizePixel = 0
+HeaderSquare.Position = UDim2.new(0,0,1,-8)
+HeaderSquare.Size = UDim2.new(1,0,0,8)
+
+local HeaderLine = Instance.new("Frame", Header)
+HeaderLine.BackgroundColor3 = Theme.Border
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Position = UDim2.new(0, 0, 1, 0)
+HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+HeaderLine.ZIndex = 6
+
+local TitleLab = Instance.new("TextLabel", Header)
+TitleLab.BackgroundTransparency = 1
+TitleLab.Position = UDim2.new(0, 15, 0, 0)
+TitleLab.Size = UDim2.new(0, 200, 1, 0)
+TitleLab.Font = Enum.Font.GothamBold
+TitleLab.Text = "ITG Webhook" 
+TitleLab.TextColor3 = Theme.Accent 
+TitleLab.TextSize = 14 
+TitleLab.TextXAlignment = "Left"
+TitleLab.ZIndex = 6
+
+local CloseBtn = Instance.new("TextButton", Header)
+CloseBtn.Name = "Close"
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Position = UDim2.new(1, -30, 0, 0)
+CloseBtn.Size = UDim2.new(0, 30, 1, 0) 
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "×" 
+CloseBtn.TextColor3 = Theme.TextSecondary
+CloseBtn.TextSize = 22
+CloseBtn.ZIndex = 6
+CloseBtn.MouseEnter:Connect(function() CloseBtn.TextColor3 = Theme.Error end)
+CloseBtn.MouseLeave:Connect(function() CloseBtn.TextColor3 = Theme.TextSecondary end)
+
+local MinBtn = Instance.new("TextButton", Header)
+MinBtn.Name = "Minimize"
+MinBtn.BackgroundTransparency = 1
+MinBtn.Position = UDim2.new(1, -60, 0, 0)
+MinBtn.Size = UDim2.new(0, 30, 1, 0)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Text = "−" 
+MinBtn.TextColor3 = Theme.TextSecondary
+MinBtn.TextSize = 22
+MinBtn.ZIndex = 6
+MinBtn.MouseEnter:Connect(function() MinBtn.TextColor3 = Theme.TextPrimary end)
+MinBtn.MouseLeave:Connect(function() MinBtn.TextColor3 = Theme.TextSecondary end)
+
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.BackgroundColor3 = Theme.Sidebar
+Sidebar.Position = UDim2.new(0, 0, 0, 36)
+Sidebar.Size = UDim2.new(0, 110, 1, -36) 
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 2
+local SideCorner = Instance.new("UICorner", Sidebar)
+SideCorner.CornerRadius = UDim.new(0, 8)
+local SideSquare = Instance.new("Frame", Sidebar)
+SideSquare.BackgroundColor3 = Theme.Sidebar
+SideSquare.BorderSizePixel = 0
+SideSquare.Position = UDim2.new(1,-8,0,0)
+SideSquare.Size = UDim2.new(0,8,1,0)
+
+local SideLine = Instance.new("Frame", Sidebar)
+SideLine.BackgroundColor3 = Theme.Border
+SideLine.BorderSizePixel = 0
+SideLine.Position = UDim2.new(1, -1, 0, 0)
+SideLine.Size = UDim2.new(0, 1, 1, 0)
+SideLine.ZIndex = 3
+
+local MenuContainer = Instance.new("Frame", Sidebar)
+MenuContainer.BackgroundTransparency = 1
+MenuContainer.Size = UDim2.new(1, 0, 1, -25) 
+MenuContainer.Position = UDim2.new(0, 0, 0, 5)
+MenuContainer.ZIndex = 5
+
+local SideLayout = Instance.new("UIListLayout", MenuContainer)
+SideLayout.Padding = UDim.new(0, 2) 
+SideLayout.HorizontalAlignment = "Center"
+Instance.new("UIPadding", MenuContainer).PaddingTop = UDim.new(0, 8)
+
+
+local ContentContainer = Instance.new("Frame", MainFrame)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Position = UDim2.new(0, 120, 0, 42)
+ContentContainer.Size = UDim2.new(1, -120, 1, -48) 
+ContentContainer.ZIndex = 3
+
+local ModalFrame = Instance.new("Frame", ScreenGui)
+ModalFrame.Name = "ModalConfirm"
+ModalFrame.BackgroundColor3 = Theme.Header
+ModalFrame.Size = UDim2.new(0, 240, 0, 110)
+ModalFrame.Position = UDim2.new(0.5, -120, 0.5, -55) 
+ModalFrame.BorderSizePixel = 0
+ModalFrame.ZIndex = 100 
+ModalFrame.Visible = false
+ModalFrame.Active = false
+Instance.new("UICorner", ModalFrame).CornerRadius = UDim.new(0, 8)
+AddStroke(ModalFrame, Theme.Border, 1)
+
+local ModalShadow = Instance.new("ImageLabel", ModalFrame)
+ModalShadow.Name = "Shadow"
+ModalShadow.AnchorPoint = Vector2.new(0.5, 0.5)
+ModalShadow.BackgroundTransparency = 1
+ModalShadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+ModalShadow.Size = UDim2.new(1, 40, 1, 40)
+ModalShadow.ZIndex = 99
+ModalShadow.Image = "rbxassetid://6014261993"
+ModalShadow.ImageColor3 = Color3.new(0, 0, 0)
+ModalShadow.ImageTransparency = 0.5
+ModalShadow.SliceCenter = Rect.new(49, 49, 450, 450)
+
+local ModalTitle = Instance.new("TextLabel", ModalFrame)
+ModalTitle.BackgroundTransparency = 1
+ModalTitle.Position = UDim2.new(0, 0, 0, 18)
+ModalTitle.Size = UDim2.new(1, 0, 0, 20)
+ModalTitle.Font = Enum.Font.GothamBold
+ModalTitle.Text = "Close Script?"
+ModalTitle.TextColor3 = Theme.TextPrimary
+ModalTitle.TextSize = 16 
+ModalTitle.ZIndex = 102
+
+local BtnYes = Instance.new("TextButton", ModalFrame)
+BtnYes.BackgroundColor3 = Theme.Error
+BtnYes.Position = UDim2.new(0, 20, 1, -40)
+BtnYes.Size = UDim2.new(0, 95, 0, 28)
+BtnYes.Font = Enum.Font.GothamBold 
+BtnYes.Text = "Yes"
+BtnYes.TextColor3 = Color3.new(1, 1, 1)
+BtnYes.TextSize = 13 
+BtnYes.ZIndex = 102
+BtnYes.Active = true
+Instance.new("UICorner", BtnYes).CornerRadius = UDim.new(0, 6)
+
+local BtnNo = Instance.new("TextButton", ModalFrame)
+BtnNo.BackgroundColor3 = Theme.Content
+BtnNo.Position = UDim2.new(1, -115, 1, -40)
+BtnNo.Size = UDim2.new(0, 95, 0, 28)
+BtnNo.Font = Enum.Font.GothamBold 
+BtnNo.Text = "No"
+BtnNo.TextColor3 = Theme.TextPrimary
+BtnNo.TextSize = 13 
+BtnNo.ZIndex = 102
+BtnNo.Active = true
+Instance.new("UICorner", BtnNo).CornerRadius = UDim.new(0, 6)
+AddStroke(BtnNo, Theme.Border, 1)
+
+local function CreatePage(name)
+    local Page = Instance.new("ScrollingFrame", ContentContainer)
+    Page.Name = "Page_" .. name
+    Page.BackgroundTransparency = 1
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.ScrollBarThickness = 3
+    Page.ScrollBarImageColor3 = Theme.Accent
+    Page.Visible = false
+    Page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    Page.AutomaticCanvasSize = "Y"
+    Page.ZIndex = 4
+    
+    local layout = Instance.new("UIListLayout", Page)
+    layout.Padding = UDim.new(0, 6) 
+    layout.SortOrder = Enum.SortOrder.LayoutOrder 
+    
+    return Page
 end
 
-local function CreateActionWithLabel(parentSection, labelText, btnText, btnColor, callback)
-    parentSection:AddButton({
-        Title = btnText,
-        Callback = callback
-    })
+local Page_Webhook = CreatePage("Webhook")
+local Page_Config = nil
+local Page_Save = CreatePage("SaveConfig") 
+local Page_Tag = CreatePage("TagDiscord")
+local Page_AdminBoost = CreatePage("AdminBoost")
+local Page_SessionStats = CreatePage("SessionStats")
+local Page_Fhising = CreatePage("Fhising")
+local Page_Setting
+
+Page_Webhook.Visible = false
+
+local function CreateTab(name, target, isDefault)
+    local TabBtn = Instance.new("TextButton", MenuContainer) 
+    TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
+    TabBtn.BackgroundTransparency = 1 
+    TabBtn.Size = UDim2.new(1, -10, 0, 26) 
+    TabBtn.Font = Enum.Font.GothamMedium 
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Theme.TextSecondary
+    TabBtn.TextSize = 11
+    TabBtn.ZIndex = 3
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
+    
+    local Indicator = Instance.new("Frame", TabBtn)
+    Indicator.Name = "ActiveIndicator"
+    Indicator.BackgroundColor3 = Theme.Accent
+    Indicator.BorderSizePixel = 0
+    Indicator.Position = UDim2.new(0, 2, 0.5, -8) 
+    Indicator.Size = UDim2.new(0, 3, 0, 16) 
+    Indicator.Visible = false 
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, page in pairs(ContentContainer:GetChildren()) do
+            if page:IsA("ScrollingFrame") or page:IsA("Frame") then
+                page.Visible = false
+            end
+        end
+        target.Visible = true
+
+        for _, child in pairs(MenuContainer:GetChildren()) do
+            if child:IsA("TextButton") then 
+                child.TextColor3 = Theme.TextSecondary
+                child.Font = Enum.Font.GothamMedium 
+                child.BackgroundTransparency = 1
+                local line = child:FindFirstChild("ActiveIndicator")
+                if line then line.Visible = false end
+            end
+        end
+        
+        TabBtn.TextColor3 = Theme.TextPrimary
+        TabBtn.Font = Enum.Font.GothamBold
+        TabBtn.BackgroundTransparency = 0.95 
+        TabBtn.BackgroundColor3 = Theme.TextPrimary
+        Indicator.Visible = true 
+    end)
+
+    if isDefault then
+        TabBtn.TextColor3 = Theme.TextPrimary
+        TabBtn.Font = Enum.Font.GothamBold
+        TabBtn.BackgroundTransparency = 0.95
+        TabBtn.BackgroundColor3 = Theme.TextPrimary
+        Indicator.Visible = true
+        target.Visible = true
+    end
 end
 
-local function CreateDropdown(parentSection, labelText, options, default, callback)
-    parentSection:AddDropdown({
-        Title = labelText,
-        Options = options,
-        Default = default,
-        Callback = callback
-    })
+CreateTab("Server Info", Page_SessionStats, true)
+CreateTab("Fhising", Page_Fhising)
+
+local Page_Teleport = CreatePage("Teleport")
+
+
+
+local TeleportList = Instance.new("UIListLayout", Page_Teleport)
+TeleportList.Padding = UDim.new(0, 5)
+TeleportList.SortOrder = Enum.SortOrder.LayoutOrder
+
+CreateTab("Teleport", Page_Teleport)
+
+local function CreateTeleportButton(parent, text, pos, size, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    Frame.Size = size
+    Frame.Position = pos
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+    
+    local Btn = Instance.new("TextButton", Frame)
+    Btn.BackgroundColor3 = Theme.Accent
+    Btn.BackgroundTransparency = 0.1
+    Btn.Size = UDim2.new(1, -10, 1, -10)
+    Btn.Position = UDim2.new(0, 5, 0, 5)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Text = text
+    Btn.TextColor3 = Color3.new(1,1,1)
+    Btn.TextSize = 11
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    
+    Btn.MouseButton1Click:Connect(callback)
+    return Btn
 end
 
-local function CreateStatItem(parentSection, label, key)
-    -- Stats will be displayed in the section directly
+local sortedAreas = {}
+for name, _ in pairs(FishingAreas) do table.insert(sortedAreas, name) end
+table.sort(sortedAreas)
+
+for i = 1, #sortedAreas, 2 do
+    local name1 = sortedAreas[i]
+    local name2 = sortedAreas[i+1]
+    
+    local Row = Instance.new("Frame", Page_Teleport)
+    Row.BackgroundTransparency = 1
+    Row.Size = UDim2.new(1, 0, 0, 35)
+    
+    local data1 = FishingAreas[name1]
+    CreateTeleportButton(Row, name1, UDim2.new(0, 0, 0, 0), UDim2.new(0.5, -3, 1, 0), function()
+        TeleportToLookAt(data1.Pos, data1.Look)
+    end)
+    
+    if name2 then
+        local data2 = FishingAreas[name2]
+        CreateTeleportButton(Row, name2, UDim2.new(0.5, 3, 0, 0), UDim2.new(0.5, -3, 1, 0), function()
+            TeleportToLookAt(data2.Pos, data2.Look)
+        end)
+    end
 end
 
-local function CreatePage(name) return {} end -- Dummy function for compatibility
-local function CreateTab(name, target, isDefault) end -- Dummy function for compatibility
+CreateTab("Notification", Page_Webhook)
+CreateTab("Admin Boost", Page_AdminBoost)
+CreateTab("List Player", Page_Tag)
+Page_Setting = Instance.new("ScrollingFrame", ContentContainer)
+Page_Setting.Name = "Page_Setting"; Page_Setting.Size = UDim2.new(1, 0, 1, 0); Page_Setting.BackgroundTransparency = 1; Page_Setting.Visible = false; Page_Setting.ScrollBarThickness = 2
+Instance.new("UIListLayout", Page_Setting).Padding = UDim.new(0, 5)
+CreateTab("Setting", Page_Setting)
+CreateTab("Save Config", Page_Save) 
 
-print("✅ ITG UI System Loaded!")
+local ToggleRegistry = {}
+
+local function CreateToggle(parent, text, settingKey, callback, validationFunc)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    Frame.BackgroundTransparency = 0
+    Frame.Size = UDim2.new(1, -5, 0, 36) 
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 180, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = text; Label.TextColor3 = Theme.TextPrimary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    
+    local default = Settings[settingKey] or false
+    
+    local Switch = Instance.new("TextButton", Frame)
+    Switch.BackgroundColor3 = default and Theme.Success or Theme.Input
+    Switch.BackgroundTransparency = 0; Switch.Position = UDim2.new(1, -45, 0.5, -10); Switch.Size = UDim2.new(0, 36, 0, 20); Switch.Text = ""
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+    
+    local Circle = Instance.new("Frame", Switch)
+    Circle.BackgroundColor3 = Color3.new(1,1,1)
+    Circle.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8); Circle.Size = UDim2.new(0, 16, 0, 16)
+    Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+    
+    local function UpdateUI(state)
+        local targetColor = state and Theme.Success or Theme.Input
+        local targetPos = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        
+        TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+        Circle:TweenPosition(targetPos, "Out", "Sine", 0.15, true)
+    end
+    
+    ToggleRegistry[settingKey] = function(val)
+        UpdateUI(val)
+        if callback then callback(val) end
+    end
+
+    Switch.MouseButton1Click:Connect(function()
+        local n = not (Switch.BackgroundColor3 == Theme.Success)
+        if n and validationFunc and not validationFunc() then ShowNotification("Webhook Empty!", true) return end
+        
+        Settings[settingKey] = n
+        
+        UpdateUI(n)
+        if callback then callback(n) end
+        
+        ShowNotification(text .. (n and " Enabled" or " Disabled"))
+    end)
+end
+
+local function CreateActionWithLabel(parent, labelText, btnText, btnColor, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    Frame.BackgroundTransparency = 0
+    Frame.Size = UDim2.new(1, -5, 0, 36) 
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 180, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = labelText; Label.TextColor3 = Theme.TextPrimary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    
+    local Btn = Instance.new("TextButton", Frame)
+    Btn.BackgroundColor3 = btnColor; Btn.BackgroundTransparency = 0.1; Btn.Position = UDim2.new(1, -80, 0.5, -11); Btn.Size = UDim2.new(0, 70, 0, 22)
+    Btn.Font = Enum.Font.GothamBold; Btn.Text = btnText; Btn.TextColor3 = Color3.new(1, 1, 1); Btn.TextSize = 11
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    
+    Btn.MouseButton1Click:Connect(callback)
+end
+
+local function CreateInput(parent, placeholder, default, callback, height)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    local finalHeight = height and (height - 2) or 32 
+    Frame.Size = UDim2.new(1, -5, 0, finalHeight); Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 140, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = placeholder; Label.TextColor3 = Theme.TextSecondary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    local inputX = (finalHeight > 34) and 160 or 150
+    local inputWidth = (finalHeight > 34) and 170 or 160
+    local InputBg = Instance.new("Frame", Frame)
+    InputBg.BackgroundColor3 = Theme.Input
+    InputBg.Position = UDim2.new(0, inputX, 0.5, -10)
+    InputBg.Size = UDim2.new(1, -inputWidth, 0, 20)
+    InputBg.ClipsDescendants = true
+    Instance.new("UICorner", InputBg).CornerRadius = UDim.new(0, 4)
+    AddStroke(InputBg, Theme.Border, 1)
+
+    local Input = Instance.new("TextBox", InputBg)
+    Input.BackgroundTransparency = 1; Input.Position = UDim2.new(0, 5, 0, 0); Input.Size = UDim2.new(1, -10, 1, 0)
+    Input.Font = Enum.Font.GothamMedium; Input.Text = default; Input.PlaceholderText = "Paste here..."; Input.TextColor3 = Theme.TextPrimary; Input.TextSize = 11; Input.TextXAlignment = "Left"; Input.ClearTextOnFocus = false
+    Input.Focused:Connect(function() AddStroke(InputBg, Theme.Accent, 1) end)
+    Input.FocusLost:Connect(function() AddStroke(InputBg, Theme.Border, 1) callback(Input.Text, Input) end)
+    return Input
+end
+
+local function CreateDropdown(parent, labelText, options, default, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    Frame.Size = UDim2.new(1, -5, 0, 36)
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 140, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = labelText; Label.TextColor3 = Theme.TextPrimary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+
+    local currentVal = default or (options and options[1]) or "None"
+    
+    local DropBtn = Instance.new("TextButton", Frame)
+    DropBtn.BackgroundColor3 = Theme.Input
+    DropBtn.Position = UDim2.new(0, 160, 0.5, -10)
+    DropBtn.Size = UDim2.new(1, -170, 0, 20)
+    DropBtn.Font = Enum.Font.GothamMedium
+    DropBtn.Text = currentVal .. " v"
+    DropBtn.TextColor3 = Theme.TextPrimary
+    DropBtn.TextSize = 11
+    Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 4)
+    AddStroke(DropBtn, Theme.Border, 1)
+    
+    DropBtn.MouseButton1Click:Connect(function()
+        if MainFrame:FindFirstChild("DropdownList_" .. labelText) then 
+            MainFrame:FindFirstChild("DropdownList_" .. labelText):Destroy() 
+            return 
+        end
+        
+        local Float = Instance.new("ScrollingFrame", MainFrame)
+        Float.Name = "DropdownList_" .. labelText
+        Float.BackgroundColor3 = Theme.Content
+        Float.Size = UDim2.new(0, 200, 0, math.min(#options * 25 + 5, 200))
+        Float.Position = UDim2.new(0.5, -100, 0.5, -75)
+        Float.ZIndex = 200
+        Float.ScrollBarThickness = 4
+        Instance.new("UICorner", Float).CornerRadius = UDim.new(0, 6)
+        AddStroke(Float, Theme.Accent, 1)
+        
+        local ListLayout = Instance.new("UIListLayout", Float)
+        ListLayout.Padding = UDim.new(0, 2)
+        
+        for _, opt in ipairs(options) do
+            local OBtn = Instance.new("TextButton", Float)
+            OBtn.Size = UDim2.new(1,0,0,25)
+            OBtn.BackgroundColor3 = Theme.Input
+            OBtn.BackgroundTransparency = 0.5
+            OBtn.Text = opt
+            OBtn.TextColor3 = Theme.TextPrimary
+            OBtn.Font = Enum.Font.GothamMedium
+            OBtn.TextSize = 11
+            
+            OBtn.MouseButton1Click:Connect(function()
+                currentVal = opt
+                DropBtn.Text = currentVal .. " v"
+                callback(opt)
+                Float:Destroy()
+            end)
+        end
+        
+        local Close = Instance.new("TextButton", Float)
+        Close.Size = UDim2.new(1,0,0,20)
+        Close.BackgroundColor3 = Theme.Error
+        Close.Text = "CLOSE"
+        Close.TextColor3 = Color3.new(1,1,1)
+        Close.TextSize = 10
+        Close.MouseButton1Click:Connect(function() Float:Destroy() end)
+    end)
+end
 
 local RPath = {"Packages", "_Index", "sleitnick_net@0.2.0", "net"}
 local function GetRemote(name)
@@ -484,7 +855,7 @@ local LastFishCount = 0
 local StuckTimer = 0
 local SavedCFrame = nil
 
-CreateToggle(FhisingSection, "Detector Stuck (15s)", false, function(state)
+CreateToggle(Page_Fhising, "Detector Stuck (15s)", false, function(state)
     DetectorStuckEnabled = state
     if state then
         LastFishCount = getFishCount()
@@ -529,7 +900,7 @@ CreateToggle(FhisingSection, "Detector Stuck (15s)", false, function(state)
 end)
 
 local AutoShakeEnabled = false
-CreateToggle(FhisingSection, "Auto Click Fishing", false, function(val)
+CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     AutoShakeEnabled = val
     local clickEffect = Players.LocalPlayer.PlayerGui:FindFirstChild("!!! Click Effect")
     if AutoShakeEnabled then
@@ -549,7 +920,7 @@ local AutoSellEnabled = false
 local SellMethod = "Count" 
 local SellValue = 600 
 
-CreateToggle(FhisingSection, "Auto Sell (10m / 600 Items)", false, function(state)
+CreateToggle(Page_Fhising, "Auto Sell (10m / 600 Items)", false, function(state)
     AutoSellEnabled = state
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
@@ -583,7 +954,7 @@ end)
 local WeatherList = { "Wind", "Cloudy", "Storm" }
 local SimpleWeatherEnabled = false
 
-CreateToggle(FhisingSection, "Enable Auto Buy Weather", false, function(state)
+CreateToggle(Page_Fhising, "Enable Auto Buy Weather", false, function(state)
     SimpleWeatherEnabled = state
     if state then
         local RF_BuyWeather = GetRemote("RF/PurchaseWeatherEvent")
@@ -607,8 +978,8 @@ local SelectedTotem = "Luck Totem"
 local TotemMap = {["Luck Totem"]=1, ["Mutation Totem"]=2, ["Shiny Totem"]=3}
 local AutoTotemEnabled = false
 
-CreateDropdown(FhisingSection, "Select Totem", TotemList, "Luck Totem", function(v) SelectedTotem = v end)
-CreateToggle(FhisingSection, "Enable Auto Spawn Totem", false, function(state)
+CreateDropdown(Page_Fhising, "Select Totem", TotemList, "Luck Totem", function(v) SelectedTotem = v end)
+CreateToggle(Page_Fhising, "Enable Auto Spawn Totem", false, function(state)
     AutoTotemEnabled = state
     if state then
         local RE_Spawn = GetRemote("RE/SpawnTotem")
@@ -662,7 +1033,7 @@ task.spawn(function()
     print("XAL: Anti-AFK Active")
 end)
 
-CreateToggle(SettingSection, "Walk On Water", false, function(state)
+CreateToggle(Page_Setting, "Walk On Water", false, function(state)
     WalkOnWaterEnabled = state
     if state then
         if not WaterPlatform then
@@ -726,7 +1097,7 @@ CreateToggle(SettingSection, "Walk On Water", false, function(state)
 end)
 
 local DisableNotificationConnection = nil
-CreateToggle(SettingSection, "Remove Fish Notification Pop-up", "DisablePopups", function(state)
+CreateToggle(Page_Setting, "Remove Fish Notification Pop-up", "DisablePopups", function(state)
     local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local SmallNotification = PlayerGui:FindFirstChild("Small Notification")
     
@@ -799,7 +1170,7 @@ table.insert(Connections, Players.LocalPlayer.CharacterAdded:Connect(function(ne
     end
 end))
 
-CreateToggle(SettingSection, "No Animation", "NoAnimation", function(state)
+CreateToggle(Page_Setting, "No Animation", "NoAnimation", function(state)
     isNoAnimationActive = state
     if state then
         DisableAnimations()
@@ -814,7 +1185,7 @@ local VFXControllerModule = require(ReplicatedStorage.Controllers.VFXController)
 local originalVFXHandle = VFXControllerModule.Handle
 local isVFXDisabled = false
 
-CreateToggle(SettingSection, "Remove Skin Effect", "RemoveVFX", function(state)
+CreateToggle(Page_Setting, "Remove Skin Effect", "RemoveVFX", function(state)
     isVFXDisabled = state
     if state then
         VFXControllerModule.Handle = function(...) end
@@ -836,7 +1207,7 @@ local ImportBtnWrapper = nil
 local ImportBtn = nil
 
 
-local SaveInput = CreateInput(SaveConfigSection, "Config Name", "", function(v) end, 36)
+local SaveInput = CreateInput(Page_Save, "Config Name", "", function(v) end, 36)
 
 local SaveBtnWrapper = Instance.new("Frame", Page_Save)
 SaveBtnWrapper.BackgroundTransparency = 1; SaveBtnWrapper.Size = UDim2.new(1, -5, 0, 30)
@@ -1452,11 +1823,11 @@ BtnViewWebhook.MouseButton1Click:Connect(function()
     BtnViewWebhook.TextColor3 = Color3.new(1,1,1)
 end)
 
-CreateToggle(WebhookNotifSection, "Secret Fish Caught", "SecretEnabled", function(v) Settings.SecretEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
-CreateToggle(WebhookNotifSection, "Ruby Gemstone", "RubyEnabled", function(v) Settings.RubyEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
-CreateToggle(WebhookNotifSection, "Notif Cave Crystal", "CaveCrystalEnabled", function(v) Settings.CaveCrystalEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
-CreateToggle(WebhookNotifSection, "Evolved Enchant Stone", "EvolvedEnabled", function(v) Settings.EvolvedEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
-CreateToggle(WebhookNotifSection, "Mutation Crystalized (Legendary)", "MutationCrystalized", function(v) Settings.MutationCrystalized = v end, function() return Current_Webhook_Fish ~= "" end)
+CreateToggle(View_Notif, "Secret Fish Caught", "SecretEnabled", function(v) Settings.SecretEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
+CreateToggle(View_Notif, "Ruby Gemstone", "RubyEnabled", function(v) Settings.RubyEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
+CreateToggle(View_Notif, "Notif Cave Crystal", "CaveCrystalEnabled", function(v) Settings.CaveCrystalEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
+CreateToggle(View_Notif, "Evolved Enchant Stone", "EvolvedEnabled", function(v) Settings.EvolvedEnabled = v end, function() return Current_Webhook_Fish ~= "" end)
+CreateToggle(View_Notif, "Mutation Crystalized (Legendary)", "MutationCrystalized", function(v) Settings.MutationCrystalized = v end, function() return Current_Webhook_Fish ~= "" end)
 
 local TestAllBtn = Instance.new("TextButton", View_Webhook)
 
@@ -1481,10 +1852,10 @@ end)
 
 local SpacerW = Instance.new("Frame", View_Webhook); SpacerW.BackgroundTransparency=1; SpacerW.Size=UDim2.new(1,0,0,0); SpacerW.LayoutOrder = -1
 
-UI_FishInput = CreateInput(WebhookURLSection, "Fish Caught", Current_Webhook_Fish, function(v) Current_Webhook_Fish = v end)
-UI_LeaveInput = CreateInput(WebhookURLSection, "Player Leave", Current_Webhook_Leave, function(v) Current_Webhook_Leave = v end)
-UI_ListInput = CreateInput(WebhookURLSection, "Player List", Current_Webhook_List, function(v) Current_Webhook_List = v end)
-UI_AdminInput = CreateInput(WebhookURLSection, "Admin Host", Current_Webhook_Admin, function(v) Current_Webhook_Admin = v end)
+UI_FishInput = CreateInput(View_Webhook, "Fish Caught", Current_Webhook_Fish, function(v) Current_Webhook_Fish = v end)
+UI_LeaveInput = CreateInput(View_Webhook, "Player Leave", Current_Webhook_Leave, function(v) Current_Webhook_Leave = v end)
+UI_ListInput = CreateInput(View_Webhook, "Player List", Current_Webhook_List, function(v) Current_Webhook_List = v end)
+UI_AdminInput = CreateInput(View_Webhook, "Admin Host", Current_Webhook_Admin, function(v) Current_Webhook_Admin = v end)
 
 local function CheckAndSendNonPS(isManual)
     if not ScriptActive then return end
@@ -1694,12 +2065,12 @@ SendStatsBtn.TextSize = 11
 Instance.new("UICorner", SendStatsBtn).CornerRadius = UDim.new(0, 6)
 
 local ServerTitle = "XALSCENT"
-CreateInput(SessionStatsSection, "Server Title", ServerTitle, function(v) ServerTitle = v end)
-CreateStatItem(SessionStatsSection, "Secret Fish Caught", "Secret")
-CreateStatItem(SessionStatsSection, "Ruby Gemstones", "Ruby")
-CreateStatItem(SessionStatsSection, "Evolved Stones", "Evolved")
-CreateStatItem(SessionStatsSection, "Crystalized Mutations", "Crystalized")
-CreateStatItem(SessionStatsSection, "Cave Crystals Found", "CaveCrystal")
+CreateInput(Page_SessionStats, "Server Title", ServerTitle, function(v) ServerTitle = v end)
+CreateStatItem(Page_SessionStats, "Secret Fish Caught", "Secret")
+CreateStatItem(Page_SessionStats, "Ruby Gemstones", "Ruby")
+CreateStatItem(Page_SessionStats, "Evolved Stones", "Evolved")
+CreateStatItem(Page_SessionStats, "Crystalized Mutations", "Crystalized")
+CreateStatItem(Page_SessionStats, "Cave Crystals Found", "CaveCrystal")
 
 
 SendStatsBtn.MouseButton1Click:Connect(function()
