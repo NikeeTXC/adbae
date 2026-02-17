@@ -901,7 +901,6 @@ if LoadDropdown then
                     Current_Webhook_Leave = data.Webhooks.Leave or ""
                     Current_Webhook_List = data.Webhooks.List or ""
                     Current_Webhook_Admin = data.Webhooks.Admin or ""
-                    -- Update inputs
                     local fishIn = Window:GetElement("FishWebhook")
                     local leaveIn = Window:GetElement("LeaveWebhook")
                     local listIn = Window:GetElement("ListWebhook")
