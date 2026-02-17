@@ -20,6 +20,17 @@ local FishingController = require(ReplicatedStorage.Controllers.FishingControlle
 -- Load Fluent UI
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
+-- Helper function for remote (defined early for use in callbacks)
+local RPath = {"Packages", "_Index", "sleitnick_net@0.2.0", "net"}
+local function GetRemote(name)
+    local curr = ReplicatedStorage
+    for _, child in ipairs(RPath) do
+        curr = curr:WaitForChild(child, 1)
+        if not curr then return nil end
+    end
+    return curr:FindFirstChild(name)
+end
+
 -- Variables
 local Current_Webhook_Fish = ""
 local Current_Webhook_Leave = ""
@@ -275,7 +286,7 @@ local LastFishCount = 0
 local StuckTimer = 0
 local SavedCFrame = nil
 
-FhisingSection:AddToggle("DetectorStuck", {Text = "Detector Stuck (15s)", Default = false, Callback = function(state)
+local function OnDetectorStuckChanged(state)
     DetectorStuckEnabled = state
     if state then
         LastFishCount = getFishCount()
@@ -310,10 +321,13 @@ FhisingSection:AddToggle("DetectorStuck", {Text = "Detector Stuck (15s)", Defaul
             end
         end)
     end
-end}})
+end
+
+FhisingSection:AddToggle("DetectorStuck", {Text = "Detector Stuck (15s)", Default = false, Callback = OnDetectorStuckChanged})
 
 local AutoShakeEnabled = false
-FhisingSection:AddToggle("AutoShake", {Text = "Auto Click Fishing", Default = false, Callback = function(val)
+
+local function OnAutoShakeChanged(val)
     AutoShakeEnabled = val
     local clickEffect = Players.LocalPlayer.PlayerGui:FindFirstChild("!!! Click Effect")
     if AutoShakeEnabled then
@@ -327,12 +341,14 @@ FhisingSection:AddToggle("AutoShake", {Text = "Auto Click Fishing", Default = fa
     elseif clickEffect then
         clickEffect.Enabled = true
     end
-end}})
+end
+
+FhisingSection:AddToggle("AutoShake", {Text = "Auto Click Fishing", Default = false, Callback = OnAutoShakeChanged})
 
 local AutoSellEnabled = false
 local SellValue = 600
 
-FhisingSection:AddToggle("AutoSell", {Text = "Auto Sell (10m / 600 Items)", Default = false, Callback = function(state)
+local function OnAutoSellChanged(state)
     AutoSellEnabled = state
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
@@ -359,12 +375,14 @@ FhisingSection:AddToggle("AutoSell", {Text = "Auto Sell (10m / 600 Items)", Defa
             end
         end)
     end
-end}})
+end
+
+FhisingSection:AddToggle("AutoSell", {Text = "Auto Sell (10m / 600 Items)", Default = false, Callback = OnAutoSellChanged})
 
 local WeatherList = { "Wind", "Cloudy", "Storm" }
 local SimpleWeatherEnabled = false
 
-FhisingSection:AddToggle("AutoWeather", {Text = "Enable Auto Buy Weather", Default = false, Callback = function(state)
+local function OnAutoWeatherChanged(state)
     SimpleWeatherEnabled = state
     if state then
         local RF_BuyWeather = GetRemote("RF/PurchaseWeatherEvent")
@@ -380,7 +398,9 @@ FhisingSection:AddToggle("AutoWeather", {Text = "Enable Auto Buy Weather", Defau
             end
         end)
     end
-end}})
+end
+
+FhisingSection:AddToggle("AutoWeather", {Text = "Enable Auto Buy Weather", Default = false, Callback = OnAutoWeatherChanged})
 
 local TotemList = {"Luck Totem", "Mutation Totem", "Shiny Totem"}
 local SelectedTotem = "Luck Totem"
@@ -388,7 +408,7 @@ local TotemMap = {["Luck Totem"]=1, ["Mutation Totem"]=2, ["Shiny Totem"]=3}
 
 FhisingSection:AddDropdown("SelectTotem", {Text = "Select Totem", Values = TotemList, Default = "Luck Totem", Callback = function(v) SelectedTotem = v end})
 
-FhisingSection:AddToggle("AutoTotem", {Text = "Enable Auto Spawn Totem", Default = false, Callback = function(state)
+local function OnAutoTotemChanged(state)
     if state then
         local RE_Spawn = GetRemote("RE/SpawnTotem")
         local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
@@ -420,7 +440,9 @@ FhisingSection:AddToggle("AutoTotem", {Text = "Enable Auto Spawn Totem", Default
             end
         end)
     end
-end}})
+end
+
+FhisingSection:AddToggle("AutoTotem", {Text = "Enable Auto Spawn Totem", Default = false, Callback = OnAutoTotemChanged})
 
 -- Teleport Tab
 local TeleportSection = Tabs.Teleport:AddSection("Teleport to Fishing Areas")
@@ -641,7 +663,7 @@ local WalkOnWaterEnabled = false
 local WaterPlatform = nil
 local WalkConnection = nil
 
-SettingSection:AddToggle("WalkOnWater", {Text = "Walk On Water", Default = false, Callback = function(state)
+local function OnWalkOnWaterChanged(state)
     WalkOnWaterEnabled = state
     if state then
         if not WaterPlatform then
@@ -693,9 +715,11 @@ SettingSection:AddToggle("WalkOnWater", {Text = "Walk On Water", Default = false
         if WalkConnection then WalkConnection:Disconnect() WalkConnection = nil end
         if WaterPlatform then WaterPlatform:Destroy() WaterPlatform = nil end
     end
-end}})
+end
 
-SettingSection:AddToggle("DisablePopups", {Text = "Remove Fish Notification Pop-up", Default = false, Callback = function(state)
+SettingSection:AddToggle("WalkOnWater", {Text = "Walk On Water", Default = false, Callback = OnWalkOnWaterChanged})
+
+local function OnDisablePopupsChanged(state)
     local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local SmallNotification = PlayerGui:FindFirstChild("Small Notification")
     if not SmallNotification then SmallNotification = PlayerGui:WaitForChild("Small Notification", 5) end
@@ -711,7 +735,9 @@ SettingSection:AddToggle("DisablePopups", {Text = "Remove Fish Notification Pop-
         if SmallNotification then SmallNotification.Enabled = true end
         ShowNotification("Pop-up Enabled", false)
     end
-end}})
+end
+
+SettingSection:AddToggle("DisablePopups", {Text = "Remove Fish Notification Pop-up", Default = false, Callback = OnDisablePopupsChanged})
 
 local isNoAnimationActive = false
 local originalAnimator = nil
@@ -754,7 +780,7 @@ table.insert(Connections, Players.LocalPlayer.CharacterAdded:Connect(function(ne
     end
 end))
 
-SettingSection:AddToggle("NoAnimation", {Text = "No Animation", Default = false, Callback = function(state)
+local function OnNoAnimationChanged(state)
     isNoAnimationActive = state
     if state then
         DisableAnimations()
@@ -763,12 +789,14 @@ SettingSection:AddToggle("NoAnimation", {Text = "No Animation", Default = false,
         EnableAnimations()
         ShowNotification("No Animation OFF", false)
     end
-end}})
+end
+
+SettingSection:AddToggle("NoAnimation", {Text = "No Animation", Default = false, Callback = OnNoAnimationChanged})
 
 local VFXControllerModule = require(ReplicatedStorage.Controllers.VFXController)
 local originalVFXHandle = VFXControllerModule.Handle
 
-SettingSection:AddToggle("RemoveVFX", {Text = "Remove Skin Effect", Default = false, Callback = function(state)
+local function OnRemoveVFXChanged(state)
     if state then
         VFXControllerModule.Handle = function(...) end
         VFXControllerModule.RenderAtPoint = function(...) end
@@ -780,7 +808,9 @@ SettingSection:AddToggle("RemoveVFX", {Text = "Remove Skin Effect", Default = fa
         VFXControllerModule.Handle = originalVFXHandle
         ShowNotification("Skin Effect Restored (Rejoin to fully fix)", false)
     end
-end}})
+end
+
+SettingSection:AddToggle("RemoveVFX", {Text = "Remove Skin Effect", Default = false, Callback = OnRemoveVFXChanged})
 
 SettingSection:AddToggle("AutoExecute", {Text = "Auto Execute on Server Hop", Default = false, Callback = function(v) Settings.AutoExecute = v end})
 
@@ -909,7 +939,9 @@ SaveConfigSection:AddButton("Delete Config", function()
     RefreshConfigList()
 end})
 
-local AutoLoadToggle = SaveConfigSection:AddToggle("AutoLoad", {Text = "Enable Auto Load", Default = false, Callback = function(state)
+local AutoLoadToggle
+
+local function OnAutoLoadChanged(state)
     local LoadDropdown3 = Window:GetElement("LoadConfig")
     local selected = LoadDropdown3 and LoadDropdown3.Value or ""
     if not selected or selected == "" then
@@ -920,7 +952,9 @@ local AutoLoadToggle = SaveConfigSection:AddToggle("AutoLoad", {Text = "Enable A
     local data = { config = selected, enabled = state }
     writefile("XAL_Configs/autoload.json", HttpService:JSONEncode(data))
     ShowNotification(state and "Autoload Set: " .. selected or "Autoload Disabled", false)
-end})
+end
+
+AutoLoadToggle = SaveConfigSection:AddToggle("AutoLoad", {Text = "Enable Auto Load", Default = false, Callback = OnAutoLoadChanged})
 
 -- Auto-load config on start
 task.spawn(function()
@@ -953,17 +987,6 @@ task.spawn(function()
         end
     end
 end)
-
--- Helper function for remote
-local RPath = {"Packages", "_Index", "sleitnick_net@0.2.0", "net"}
-local function GetRemote(name)
-    local curr = ReplicatedStorage
-    for _, child in ipairs(RPath) do
-        curr = curr:WaitForChild(child, 1)
-        if not curr then return nil end
-    end
-    return curr:FindFirstChild(name)
-end
 
 -- Webhook Send Functions
 local function StripTags(str) return string.gsub(str, "<[^>]+>", "") end
