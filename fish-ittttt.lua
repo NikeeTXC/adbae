@@ -1,4 +1,3 @@
-print("ITG: Script Starting...")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -31,8 +30,8 @@ task.spawn(function()
     end
 end)
 
-if getgenv and getgenv().XAL_Stop then
-    pcall(getgenv().XAL_Stop)
+if getgenv and getgenv().Byu_Stop then
+    pcall(getgenv().Byu_Stop)
 end
 
 local function CleanupScript()
@@ -48,16 +47,16 @@ local function CleanupScript()
     
     if ScreenGui then ScreenGui:Destroy() end
     
-    print("❌ XAL System: Script closed and cleanup complete.")
-    if getgenv then getgenv().XAL_Stop = nil end
+    print("❌ NikeeHUB System: Script closed and cleanup complete.")
+    if getgenv then getgenv().Byu_Stop = nil end
 end
 
 if getgenv then
-    getgenv().XAL_Stop = CleanupScript
+    getgenv().Byu_Stop = CleanupScript
 end
 
-if not isfolder("XAL_Configs") then 
-    pcall(function() makefolder("XAL_Configs") end)
+if not isfolder("Nikee_Configs") then 
+    pcall(function() makefolder("Nikee_Configs") end)
 end
 
 local Theme = {
@@ -166,7 +165,7 @@ task.spawn(function()
             v:Disable()
         end
     end)
-    print("XAL: Anti-AFK Active")
+    print("NikeeHUB: Anti-AFK Active")
 end)
 
 task.spawn(function()
@@ -177,7 +176,7 @@ task.spawn(function()
             local TpService = game:GetService("TeleportService")
             local TeleportingConn = TpService.TeleportInit:Connect(function()
                 if Settings.AutoExecute then
-                    print("XAL: Queuing Auto Execute...")
+                    print("NikeeHUB: Queuing Auto Execute...")
                     pcall(function()
                         queueTeleport([[
                             task.wait(5)
@@ -191,7 +190,7 @@ task.spawn(function()
                             if scriptCode then
                                 loadstring(scriptCode)()
                             else
-                                warn("XAL AutoExecute: Could not find script file to execute!")
+                                warn("NikeeHUB AutoExecute: Could not find script file to execute!")
                             end
                         ]])
                     end)
@@ -200,7 +199,7 @@ task.spawn(function()
             table.insert(Connections, TeleportingConn)
         end
     end)
-    if not success then warn("XAL: AutoExecute Not Supported: " .. tostring(err)) end
+    if not success then warn("NikeeHUB: AutoExecute Not Supported: " .. tostring(err)) end
 end)
 
 local TagList = {} 
@@ -235,7 +234,7 @@ end
 
 UpdateTagData() 
 
-local oldUI = CoreGui:FindFirstChild(SafeName) or CoreGui:FindFirstChild("XAL_System")
+local oldUI = CoreGui:FindFirstChild(SafeName) or CoreGui:FindFirstChild("NikeeHUB_Script")
 if oldUI then oldUI:Destroy() task.wait(0.1) end
 
 ScreenGui = Instance.new("ScreenGui")
@@ -364,7 +363,7 @@ TitleLab.BackgroundTransparency = 1
 TitleLab.Position = UDim2.new(0, 15, 0, 0)
 TitleLab.Size = UDim2.new(0, 200, 1, 0)
 TitleLab.Font = Enum.Font.GothamBold
-TitleLab.Text = "ITG Webhook" 
+TitleLab.Text = "NikeeHUB" 
 TitleLab.TextColor3 = Theme.Accent 
 TitleLab.TextSize = 14 
 TitleLab.TextXAlignment = "Left"
@@ -1258,7 +1257,7 @@ local function RefreshConfigList()
     selectedConfig = nil
     LoadBtn.BackgroundColor3 = Theme.Input 
     
-    local success, files = pcall(function() return listfiles("XAL_Configs") end)
+    local success, files = pcall(function() return listfiles("Nikee_Configs") end)
     if not success or not files then files = {} end
 
     for _, file in pairs(files) do
@@ -1285,7 +1284,7 @@ local function RefreshConfigList()
 end
 
 local function LoadConfig(configName)
-    local success, content = pcall(function() return readfile("XAL_Configs/" .. configName .. ".json") end)
+    local success, content = pcall(function() return readfile("Nikee_Configs/" .. configName .. ".json") end)
     if not success then ShowNotification("Read Failed!", true) return false end
 
     local decodeSuccess, data = pcall(function() return HttpService:JSONDecode(content) end)
@@ -1381,13 +1380,13 @@ SaveBtn.MouseButton1Click:Connect(function()
     local jsonSuccess, encodedData = pcall(function() return HttpService:JSONEncode(saveData) end)
     if not jsonSuccess then
         ShowNotification("Encoding Error: " .. tostring(encodedData), true)
-        warn("ITG SAVE ERROR (JSON):", encodedData)
+        warn("NikeeHUB SAVE ERROR (JSON):", encodedData)
         return
     end
 
     local success, err = pcall(function()
-        if not isfolder("XAL_Configs") then makefolder("XAL_Configs") end
-        writefile("XAL_Configs/" .. name .. ".json", encodedData)
+        if not isfolder("NikeeHUB_Configs") then makefolder("NikeeHUB_Configs") end
+        writefile("NikeeHUB_Configs/" .. name .. ".json", encodedData)
     end)
     
     if success then
@@ -1395,7 +1394,7 @@ SaveBtn.MouseButton1Click:Connect(function()
         RefreshConfigList()
     else
         ShowNotification("Write Error: " .. tostring(err), true)
-        warn("ITG SAVE ERROR (WRITE):", err)
+        warn("NikeeHUB SAVE ERROR (WRITE):", err)
     end
 end)
 
@@ -1406,13 +1405,13 @@ end)
 
 DeleteBtn.MouseButton1Click:Connect(function()
     if not selectedConfig then return end
-    delfile("XAL_Configs/" .. selectedConfig .. ".json")
+    delfile("NikeeHUB_Configs/" .. selectedConfig .. ".json")
     ShowNotification("Deleted!", false)
     RefreshConfigList()
 end)
 
 local AutoLoadToggle = nil
-local AutoLoadConfigPath = "XAL_Configs/autoload.json"
+local AutoLoadConfigPath = "NikeeHUB_Configs/autoload.json"
 local currentAutoLoad = nil
 
 local function SaveAutoLoadPref(configName, enabled)
@@ -1484,7 +1483,7 @@ RefreshConfigList = function()
     LoadBtn.BackgroundColor3 = Theme.Input
     UpdateAutoLoadBtnState()
     
-    local success, files = pcall(function() return listfiles("XAL_Configs") end)
+    local success, files = pcall(function() return listfiles("Nikee_Configs") end)
     if not success or not files then files = {} end
 
     for _, file in pairs(files) do
@@ -1587,7 +1586,7 @@ local function TestWebhook(url, name)
     if url == "" then ShowNotification("URL Empty!", true) return end
     ShowNotification("Sending Test...", false)
     task.spawn(function()
-        local p = { content = "✅ **TEST:** " .. name .. " Connected!", username = "ITG", avatar_url = "https://i.imgur.com/sblcM31.jpeg" }
+        local p = { content = "✅ **TEST:** " .. name .. " Connected!", username = "NikeeHUB", avatar_url = "https://i.imgur.com/CWWGnhO.jpeg" }
         local success, response = pcall(function()
             return httpRequest({ Url = url, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
         end)
@@ -1888,7 +1887,7 @@ local function CheckAndSendNonPS(isManual)
     if #missingTags > 0 then contentMsg = " **Peringatan:** " .. table.concat(missingTags, " ") .. " belum masuk server!" end
     
     task.spawn(function()
-        local p = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = "Player Not On Server", ["description"] = "```\n" .. txt .. "\n```", ["color"] = 16733440, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+        local p = { ["username"] = "NikeeHUB", ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = "Player Not On Server", ["description"] = "```\n" .. txt .. "\n```", ["color"] = 16733440, ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" } }} }
         httpRequest({ Url = Current_Webhook_List, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
     end)
 end
@@ -1917,7 +1916,7 @@ BtnPS.MouseButton1Click:Connect(function()
     local all = Players:GetPlayers(); local str = "Current Players (" .. #all .. "):\n\n"
     for i, p in ipairs(all) do str = str .. i .. ". " .. p.DisplayName .. " (@" .. p.Name .. ")\n" end
     task.spawn(function()
-        local p = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["embeds"] = {{ ["title"] = " Manual Player List", ["description"] = "```\n" .. str .. "\n```", ["color"] = 5763719, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+        local p = { ["username"] = "NikeeHUB", ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg", ["embeds"] = {{ ["title"] = " Manual Player List", ["description"] = "```\n" .. str .. "\n```", ["color"] = 5763719, ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" } }} }
         httpRequest({ Url = Current_Webhook_List, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
     end)
 end)
@@ -1957,14 +1956,14 @@ task.spawn(function()
                      task.spawn(function()
                          if Current_Webhook_Admin == "" then return end
                          local embed = {
-                             ["username"] = "ITG Security",
-                             ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+                             ["username"] = "NikeeHUB",
+                             ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg",
                              ["content"] = "⚠️ **HIGH PING DETECTED!**",
                              ["embeds"] = {{
                                  ["title"] = "Server Lag Alert",
                                  ["description"] = "```\nCurrent Ping: " .. math.floor(ping) .. " ms\n```",
                                  ["color"] = 16776960,
-                                 ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+                                 ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" }
                              }}
                          }
                          pcall(function() httpRequest({ Url = Current_Webhook_Admin, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(embed) }) end)
@@ -1985,7 +1984,7 @@ task.spawn(function()
     end
 end)
 
-local IconPath = "XAL_Min_Icon.jpg"
+local IconPath = "Nikee_Script.jpg"
 local IconUrl = "https://i.imgur.com/Z92uLfK.jpeg"
 local RealIconAsset = ""
 
@@ -2094,13 +2093,13 @@ SendStatsBtn.MouseButton1Click:Connect(function()
     
     task.spawn(function()
          local embed = {
-             ["username"] = "ITG Stats",
-             ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+             ["username"] = "NikeeHUB Stats",
+             ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg",
              ["embeds"] = {{
                  ["title"] = "Session Report",
                  ["description"] = "```\n" .. contentStr .. "\n```",
                  ["color"] = 5763719,
-                 ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+                 ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" }
              }}
          }
          httpRequest({ Url = Current_Webhook_Admin, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(embed) })
@@ -2126,8 +2125,8 @@ BtnYes.MouseButton1Click:Connect(function()
     if ScreenGui then ScreenGui:Destroy() end
     ScriptActive = false
     
-    if getgenv and getgenv().XAL_Stop then
-        pcall(getgenv().XAL_Stop)
+    if getgenv and getgenv().Byu_Stop then
+        pcall(getgenv().Byu_Stop)
     end
 end)
 
@@ -2243,7 +2242,7 @@ local function SendWebhook(data, category)
     if UI_StatsLabels["Crystalized"] then UI_StatsLabels["Crystalized"].Text = tostring(SessionStats.Crystalized) end
     if UI_StatsLabels["CaveCrystal"] then UI_StatsLabels["CaveCrystal"].Text = tostring(SessionStats.CaveCrystal) end
     
-    local embedData = { ["username"] = "ITG", ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = embedTitle, ["description"] = descriptionText, ["color"] = embedColor, ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" } }} }
+    local embedData = { ["username"] = "NikeeHUB", ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = embedTitle, ["description"] = descriptionText, ["color"] = embedColor, ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" } }} }
     pcall(function() httpRequest({ Url = TargetURL, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = HttpService:JSONEncode(embedData) }) end)
 end
 
@@ -2373,14 +2372,14 @@ table.insert(Connections, Players.PlayerAdded:Connect(function(p)
                  
                  local contentStr = "Foreign Player Detected!" .. adminTags
                  local embed = {
-                    ["username"] = "ITG Security",
-                    ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+                    ["username"] = "NikeeHUB Security",
+                    ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg",
                     ["content"] = contentStr,
                     ["embeds"] = {{
                         ["title"] = "Player Information",
                         ["description"] = "```\nName: " .. p.DisplayName .. "\nUsername: " .. p.Name .. "\n```",
                         ["color"] = 16711680,
-                        ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+                        ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" }
                     }}
                  }
                  pcall(function() 
@@ -2400,10 +2399,10 @@ local targetPlaceId = game.PlaceId
 local targetJobId = game.JobId
 local function FastInfiniteRejoin()
     if not ScriptActive then return end
-    print("🔄 ITG: Mencoba reconnect setiap 5 detik...")
+    print("🔄 NikeeHUB: Mencoba reconnect setiap 5 detik...")
     while ScriptActive do
         local success, err = pcall(function() TeleportService:TeleportToPlaceInstance(targetPlaceId, targetJobId, game.Players.LocalPlayer) end)
-        if success then print("✅ ITG: Perintah reconnect berhasil dikirim!") break else warn("⚠️ ITG: Gagal, mencoba lagi dalam 5 detik...") end
+        if success then print("✅ NikeeHUB: Perintah reconnect berhasil dikirim!") break else warn("⚠️ NikeeHUB: Gagal, mencoba lagi dalam 5 detik...") end
         task.wait(5)
     end
 end
@@ -2412,12 +2411,12 @@ local function SendDisconnectWebhook(reason)
     if not ScriptActive then return end
     if Current_Webhook_List == "" then return end
     if tick() - LastDisconnectTime < 30 then 
-        print("⚠️ ITG: Disconnect Webhook Cooldown Active")
+        print("⚠️ NikeeHUB: Disconnect Webhook Cooldown Active")
         return 
     end
     LastDisconnectTime = tick()
     
-    print("⚠️ ITG: Sending Disconnect Webhook (Reason: " .. tostring(reason) .. ")")
+    print("⚠️ NikeeHUB: Sending Disconnect Webhook (Reason: " .. tostring(reason) .. ")")
     
     local adminTags = ""
     local id1 = (TagList[1] and TagList[1][2]) or ""
@@ -2432,14 +2431,14 @@ local function SendDisconnectWebhook(reason)
     end
     
     local embed = {
-        ["username"] = "ITG",
-        ["avatar_url"] = "https://i.imgur.com/sblcM31.jpeg",
+        ["username"] = "NikeeHUB",
+        ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg",
         ["content"] = contentMsg,
         ["embeds"] = {{
             ["title"] = "LocalPlayer Disconnected",
             ["description"] = "Information\nUser: **" .. Players.LocalPlayer.Name .. "** (@" .. Players.LocalPlayer.DisplayName .. ") has disconnected.\n**Reason:** " .. tostring(reason),
             ["color"] = 16711680,
-            ["footer"] = { ["text"] = "ITG Webhook", ["icon_url"] = "https://i.imgur.com/sblcM31.jpeg" }
+            ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" }
         }}
     }
     
@@ -2498,7 +2497,7 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
-print("✅ ITG System Session v1.0 Loaded!")
+print("✅ NikeeHUB System Session v1.0 Loaded!")
 
 task.delay(1, function()
     local autoPref = GetAutoLoadPref()
