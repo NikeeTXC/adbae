@@ -2,20 +2,28 @@ local success, Chloex = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/NikeeTXC/adbae/refs/heads/main/UI/MainUi.lua"))()
 end)
 
+if not success then
+    warn("Failed to load UI:", Chloex)
+    return
+end
+
 -- [[ load Window ]]
 local Window = Chloex:Window({
-    Title   = "NateiraHub | Freemium | ",                --- title
-    Footer  = "V0.0.0.4",                   --- in right after title
-    Image   = "84946340265305",           ---- rbxassetid (texture)
-    Color   = Color3.fromRGB(255, 255, 255), --- colour text/ui
-    Theme   = 84946340265305,                  ---- background for theme ui (rbxassetid)
-    Version = 1,                           --- version config set as default 1 if u remake / rewrite / big update and change name name in your hub change it to 2 and config will reset
+    Title   = "NateiraHub | Freemium | ",
+    Footer  = "V0.0.0.4",
+    Image   = "84946340265305",
+    Color   = Color3.fromRGB(255, 255, 255),
+    Theme   = 84946340265305,
+    Version = 1,
 })
 
---- [[ Notify ]]
-if Window then
-    Nt("Window loaded!")
+if not Window then
+    warn("Failed to create Window")
+    return
 end
+
+--- [[ Notify ]]
+Nt("Window loaded!")
 
 local Tabs = {
     Info = Window:AddTab({ Name = "Info", Icon = "player" }),
@@ -63,9 +71,14 @@ x1:AddToggle({
 
 UIS.JumpRequest:Connect(function()
     if _G.InfiniteJump then
-        local h = P.Character and P.Character:FindFirstChildOfClass("Humanoid")
-        if h then
-            h:ChangeState(Enum.HumanoidStateType.Jumping)
+        local success, err = pcall(function()
+            local h = P.Character and P.Character:FindFirstChildOfClass("Humanoid")
+            if h then
+                h:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+        if not success then
+            warn("Infinite Jump error:", err)
         end
     end
 end)
@@ -81,14 +94,20 @@ x1:AddToggle({
         if state then
             task.spawn(function()
                 while _G.Noclip do
-                    task.wait(0.1)
-                    local character = Player.Character
-                    if character then
-                        for _, part in pairs(character:GetDescendants()) do
-                            if part:IsA("BasePart") and part.CanCollide then
-                                part.CanCollide = false
+                    local success, err = pcall(function()
+                        task.wait(0.1)
+                        local character = Player.Character
+                        if character then
+                            for _, part in pairs(character:GetDescendants()) do
+                                if part:IsA("BasePart") and part.CanCollide then
+                                    part.CanCollide = false
+                                end
                             end
                         end
+                    end)
+                    if not success then
+                        warn("Noclip error:", err)
+                        break
                     end
                 end
             end)
@@ -111,26 +130,36 @@ local function msg(t,c)
 end
 
 local function setFreeze(s)
-	local c = P.Character or P.CharacterAdded:Wait()
-	local h = c:FindFirstChildOfClass("Humanoid")
-	local r = c:FindFirstChild("HumanoidRootPart")
-	if not h or not r then return end
+    local success, err = pcall(function()
+        local c = P.Character
+        if not c then return end
+        local h = c:FindFirstChildOfClass("Humanoid")
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if not h or not r then return end
 
-	if s then
-		last = r.CFrame
-		h.WalkSpeed,h.JumpPower,h.AutoRotate,h.PlatformStand = 0,0,false,true
-		for _,t in ipairs(h:GetPlayingAnimationTracks()) do t:Stop(0) end
-		local a = h:FindFirstChildOfClass("Animator")
-		if a then a:Destroy() end
-		r.Anchored = true
-		msg("Freeze character",Color3.fromRGB(100,200,255))
-	else
-		h.WalkSpeed,h.JumpPower,h.AutoRotate,h.PlatformStand = 16,50,true,false
-		if not h:FindFirstChildOfClass("Animator") then Instance.new("Animator",h) end
-		r.Anchored = false
-		if last then r.CFrame = last end
-		msg("Character released",Color3.fromRGB(255,150,150))
-	end
+        if s then
+            last = r.CFrame
+            h.WalkSpeed, h.JumpPower, h.AutoRotate, h.PlatformStand = 0, 0, false, true
+            for _, t in ipairs(h:GetPlayingAnimationTracks()) do 
+                pcall(function() t:Stop(0) end)
+            end
+            local a = h:FindFirstChildOfClass("Animator")
+            if a then pcall(function() a:Destroy() end) end
+            r.Anchored = true
+            msg("Freeze character", Color3.fromRGB(100, 200, 255))
+        else
+            h.WalkSpeed, h.JumpPower, h.AutoRotate, h.PlatformStand = 16, 50, true, false
+            if not h:FindFirstChildOfClass("Animator") then 
+                pcall(function() Instance.new("Animator", h) end)
+            end
+            r.Anchored = false
+            if last then r.CFrame = last end
+            msg("Character released", Color3.fromRGB(255, 150, 150))
+        end
+    end)
+    if not success then
+        warn("Freeze error:", err)
+    end
 end
 
 x1:AddToggle({
@@ -143,7 +172,17 @@ x1:AddToggle({
 })
 
 P.CharacterAdded:Connect(function(c)
-	if frozen then task.wait(.5); setFreeze(true) end
+    if frozen then 
+        task.spawn(function()
+            local success, err = pcall(function()
+                task.wait(0.5)
+                setFreeze(true)
+            end)
+            if not success then
+                warn("Freeze on respawn error:", err)
+            end
+        end)
+    end
 end)
 
 local Players = game:GetService("Players")
@@ -157,20 +196,24 @@ local function getHumanoid()
 end
 
 local function stopAllAnimations()
-    local humanoid = getHumanoid()
-    local animator = humanoid:FindFirstChildOfClass("Animator")
+    local success, err = pcall(function()
+        local humanoid = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        local animator = humanoid:FindFirstChildOfClass("Animator")
 
-    if animator then
-        -- stop animasi yang lagi jalan
-        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-            track:Stop()
+        if animator then
+            for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                pcall(function() track:Stop() end)
+            end
+
+            if animConn then animConn:Disconnect() end
+            animConn = animator.AnimationPlayed:Connect(function(track)
+                pcall(function() track:Stop() end)
+            end)
         end
-
-        -- DISABLE animasi baru
-        if animConn then animConn:Disconnect() end
-        animConn = animator.AnimationPlayed:Connect(function(track)
-            track:Stop()
-        end)
+    end)
+    if not success then
+        warn("Stop animation error:", err)
     end
 end
 
@@ -197,10 +240,17 @@ x1:AddToggle({
 
 -- auto apply saat respawn
 Player.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    if _G.DisableAnimation then
-        stopAllAnimations()
-    end
+    task.spawn(function()
+        local success, err = pcall(function()
+            task.wait(0.5)
+            if _G.DisableAnimation then
+                stopAllAnimations()
+            end
+        end)
+        if not success then
+            warn("Animation on respawn error:", err)
+        end
+    end)
 end)
 
 ---------
@@ -237,47 +287,52 @@ x1:AddToggle({
 			_G.walkOnWaterConnection = _G.RunService.RenderStepped:Connect(function()
 				if not _G.isWalkOnWater then return end
 
-				_G.character = _G.LocalPlayer.Character
-				if not _G.character then return end
+				local success, err = pcall(function()
+					_G.character = _G.LocalPlayer.Character
+					if not _G.character then return end
 
-				_G.hrp = _G.character:FindFirstChild("HumanoidRootPart")
-				if not _G.hrp then return end
+					_G.hrp = _G.character:FindFirstChild("HumanoidRootPart")
+					if not _G.hrp then return end
 
-				_G.rayParams = RaycastParams.new()
-				_G.rayParams.FilterDescendantsInstances = { workspace.Terrain }
-				_G.rayParams.FilterType = Enum.RaycastFilterType.Include
-				_G.rayParams.IgnoreWater = false
+					_G.rayParams = RaycastParams.new()
+					_G.rayParams.FilterDescendantsInstances = { workspace.Terrain }
+					_G.rayParams.FilterType = Enum.RaycastFilterType.Include
+					_G.rayParams.IgnoreWater = false
 
-				_G.result = workspace:Raycast(
-					_G.hrp.Position + Vector3.new(0,5,0),
-					Vector3.new(0,-500,0),
-					_G.rayParams
-				)
-
-				if _G.result and _G.result.Material == Enum.Material.Water then
-					_G.waterY = _G.result.Position.Y
-
-					_G.waterPlatform.Position = Vector3.new(
-						_G.hrp.Position.X,
-						_G.waterY,
-						_G.hrp.Position.Z
+					_G.result = workspace:Raycast(
+						_G.hrp.Position + Vector3.new(0,5,0),
+						Vector3.new(0,-500,0),
+						_G.rayParams
 					)
 
-					if _G.hrp.Position.Y < _G.waterY + 2 then
-						if not _G.UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-							_G.hrp.CFrame = CFrame.new(
-								_G.hrp.Position.X,
-								_G.waterY + 3.2,
-								_G.hrp.Position.Z
-							)
+					if _G.result and _G.result.Material == Enum.Material.Water then
+						_G.waterY = _G.result.Position.Y
+
+						_G.waterPlatform.Position = Vector3.new(
+							_G.hrp.Position.X,
+							_G.waterY,
+							_G.hrp.Position.Z
+						)
+
+						if _G.hrp.Position.Y < _G.waterY + 2 then
+							if not _G.UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+								_G.hrp.CFrame = CFrame.new(
+									_G.hrp.Position.X,
+									_G.waterY + 3.2,
+									_G.hrp.Position.Z
+								)
+							end
 						end
+					else
+						_G.waterPlatform.Position = Vector3.new(
+							_G.hrp.Position.X,
+							-500,
+							_G.hrp.Position.Z
+						)
 					end
-				else
-					_G.waterPlatform.Position = Vector3.new(
-						_G.hrp.Position.X,
-						-500,
-						_G.hrp.Position.Z
-					)
+				end)
+				if not success then
+					warn("Walk on Water error:", err)
 				end
 			end)
 
@@ -322,38 +377,24 @@ local state = {
 -- cast delay
 _G.CastDelay = 0.0000001
 
-local FishingController = require(
-    ReplicatedStorage
-        :WaitForChild("Controllers")
-        :WaitForChild("FishingController")
-)
-
-local oldCharge = FishingController.RequestChargeFishingRod
-FishingController.RequestChargeFishingRod = function(...)
-    if state.running then return end
-    return oldCharge(...)
-end
-
 local loopThread
 
 local function doFishing()
-    task.wait(_G.CastDelay)
-
-    pcall(function()
+    local success, err = pcall(function()
+        task.wait(_G.CastDelay)
         Remotes.RequestStart:InvokeServer(-139.6, 0.996)
-    end)
 
-    local startTick = tick()
-    while tick() - startTick < state.completeDelay do
-        pcall(function()
+        local startTick = tick()
+        while tick() - startTick < state.completeDelay and state.running do
             Remotes.Charge:InvokeServer(tick())
-        end)
-        task.wait()
-    end
+            task.wait()
+        end
 
-    pcall(function()
         Remotes.Complete:InvokeServer()
     end)
+    if not success then
+        warn("Fishing error:", err)
+    end
 end
 
 local function start()
@@ -363,7 +404,7 @@ local function start()
     loopThread = task.spawn(function()
         while state.running do
             doFishing()
-            task.wait()
+            task.wait(0.5)
         end
     end)
 end
@@ -603,14 +644,17 @@ local FishParagraph = x4:AddParagraph({
 -- UPDATE CONTENT
 task.spawn(function()
     local last = -1
-    while true do
-        local count = getFishCount()
-        if count ~= last then
-            last = count
-            --paragrpah
-            FishParagraph:SetContent("Fish in Bag: " .. count)
+    while task.wait(0.5) do
+        local success, err = pcall(function()
+            local count = getFishCount()
+            if count ~= last then
+                last = count
+                FishParagraph:SetContent("Fish in Bag: " .. count)
+            end
+        end)
+        if not success then
+            warn("Fish counter error:", err)
         end
-        task.wait(0.5)
     end
 end)
 
@@ -788,12 +832,15 @@ x4:AddToggle({
 
             autoClaimClassicThread = task.spawn(function()
                 while autoClaimClassicState do
-                    for i = 1, 15 do
-                        if not autoClaimClassicState then break end
-                        pcall(function()
+                    local success, err = pcall(function()
+                        for i = 1, 15 do
+                            if not autoClaimClassicState then break end
                             RE_ClaimEventReward:FireServer(i)
-                        end)
-                        task.wait(0.1)
+                            task.wait(0.1)
+                        end
+                    end)
+                    if not success then
+                        warn("Auto Claim Event error:", err)
                     end
                     task.wait(60)
                 end
@@ -829,9 +876,17 @@ local function getHRP()
 end
 
 local function teleport(cf)
-    local hrp = getHRP()
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    hrp.CFrame = cf + Vector3.new(0, 3, 0)
+    local success, err = pcall(function()
+        local char = plr.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.CFrame = cf + Vector3.new(0, 3, 0)
+    end)
+    if not success then
+        warn("Teleport error:", err)
+    end
 end
 
 local function getInteractable(obj)
@@ -844,12 +899,14 @@ end
 local function interactOnce(obj)
     local i = getInteractable(obj)
     if not i then return false end
-    if i:IsA("ProximityPrompt") then
-        fireproximityprompt(i, 1)
-    else
-        fireclickdetector(i)
-    end
-    return true
+    local success, result = pcall(function()
+        if i:IsA("ProximityPrompt") then
+            fireproximityprompt(i)
+        elseif i:IsA("ClickDetector") then
+            fireclickdetector(i)
+        end
+    end)
+    return success
 end
 
 local function getRandomChest()
@@ -878,31 +935,37 @@ x4:AddToggle({
             end
 
             autoClaimTreasureThread = task.spawn(function()
-                teleport(START_CFRAME)
-                task.wait(0.6)
+                local success, err = pcall(function()
+                    teleport(START_CFRAME)
+                    task.wait(0.6)
 
-                while autoClaimTreasureState do
-                    local chest = getRandomChest()
-                    if not chest then
-                        autoClaimTreasureState = false
-                        Nt("Semua Treasure Chest sudah di-claim")
-                        break
+                    while autoClaimTreasureState do
+                        local chest = getRandomChest()
+                        if not chest then
+                            autoClaimTreasureState = false
+                            Nt("Semua Treasure Chest sudah di-claim")
+                            break
+                        end
+
+                        triedChests[chest] = true
+
+                        local part =
+                            chest:IsA("Model")
+                            and (chest.PrimaryPart or chest:FindFirstChildWhichIsA("BasePart"))
+                            or chest
+
+                        if part then
+                            teleport(part.CFrame)
+                            task.wait(0.4)
+                            interactOnce(chest)
+                        end
+
+                        task.wait(LOOP_DELAY)
                     end
-
-                    triedChests[chest] = true
-
-                    local part =
-                        chest:IsA("Model")
-                        and (chest.PrimaryPart or chest:FindFirstChildWhichIsA("BasePart"))
-                        or chest
-
-                    if part then
-                        teleport(part.CFrame)
-                        task.wait(0.4)
-                        interactOnce(chest)
-                    end
-
-                    task.wait(LOOP_DELAY)
+                end)
+                if not success then
+                    warn("Auto Claim Treasure error:", err)
+                    autoClaimTreasureState = false
                 end
             end)
         else
