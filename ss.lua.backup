@@ -60,23 +60,19 @@ if not isfolder("XAL_Configs") then
     pcall(function() makefolder("XAL_Configs") end)
 end
 
--- Discord Theme Configuration
 local Theme = {
-    -- Discord Color Palette
-    Background = Color3.fromRGB(54, 57, 63),        -- Main background
-    Header = Color3.fromRGB(47, 49, 54),            -- Header/secondary bg
-    Sidebar = Color3.fromRGB(43, 45, 49),           -- Sidebar bg
-    Content = Color3.fromRGB(32, 34, 37),           -- Content card bg
-    Accent = Color3.fromRGB(88, 101, 242),          -- Discord Blurple (primary accent)
-    AccentHover = Color3.fromRGB(100, 115, 255),    -- Hover accent
-    TextPrimary = Color3.fromRGB(255, 255, 255),    -- Primary text
-    TextSecondary = Color3.fromRGB(185, 187, 190),  -- Muted text
-    Border = Color3.fromRGB(109, 111, 114),         -- Divider
-    Input = Color3.fromRGB(32, 34, 37),             -- Input background
-    Success = Color3.fromRGB(88, 203, 88),          -- Green/Success
-    Error = Color3.fromRGB(240, 71, 71),            -- Red/Error
-    Hover = Color3.fromRGB(58, 61, 68),             -- Hover background
-    Active = Color3.fromRGB(68, 72, 79)             -- Active state
+    Background = Color3.fromRGB(20, 22, 28),
+    Header = Color3.fromRGB(25, 28, 35),
+    Sidebar = Color3.fromRGB(18, 20, 25),
+    Content = Color3.fromRGB(22, 24, 30),
+    Accent = Color3.fromRGB(0, 139, 139), 
+    AccentHover = Color3.fromRGB(0, 160, 160), 
+    TextPrimary = Color3.fromRGB(240, 240, 240),
+    TextSecondary = Color3.fromRGB(160, 165, 175),
+    Border = Color3.fromRGB(45, 50, 60),
+    Input = Color3.fromRGB(15, 16, 20),
+    Success = Color3.fromRGB(75, 185, 115),
+    Error = Color3.fromRGB(235, 85, 85)
 }
 
 local Current_Webhook_Fish = ""
@@ -272,19 +268,19 @@ end
 function ShowNotification(msg, isError)
     if not ScriptActive then return end
     local NotifFrame = Instance.new("Frame", ScreenGui)
-    NotifFrame.BackgroundColor3 = Theme.Header
+    NotifFrame.BackgroundColor3 = Theme.Background
     NotifFrame.BorderSizePixel = 0
     NotifFrame.Position = UDim2.new(0.5, -110, 0.1, 0)
-    NotifFrame.Size = UDim2.new(0, 220, 0, 42)
+    NotifFrame.Size = UDim2.new(0, 220, 0, 40)
     NotifFrame.ZIndex = 200
-
+    
     Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 8)
-    AddStroke(NotifFrame, isError and Theme.Error or Theme.Success, 2)
-
-    local Icon = Instance.new("Frame", NotifFrame)
-    Icon.BackgroundColor3 = isError and Theme.Error or Theme.Success
-    Icon.Size = UDim2.new(0, 4, 1, -12)
-    Icon.Position = UDim2.new(0, 8, 0.5, -((42-12)/2))
+    AddStroke(NotifFrame, isError and Theme.Error or Theme.Accent, 1.5)
+    
+    local Icon = Instance.new("Frame", NotifFrame) 
+    Icon.BackgroundColor3 = isError and Theme.Error or Theme.Accent
+    Icon.Size = UDim2.new(0, 4, 1, -10)
+    Icon.Position = UDim2.new(0, 8, 0.5, -((40-10)/2))
     Instance.new("UICorner", Icon).CornerRadius = UDim.new(1,0)
 
     local Label = Instance.new("TextLabel", NotifFrame)
@@ -296,16 +292,16 @@ function ShowNotification(msg, isError)
     Label.TextColor3 = Theme.TextPrimary
     Label.TextSize = 13
     Label.ZIndex = 201
-
+    
     NotifFrame.BackgroundTransparency = 1
     Label.TextTransparency = 1
     Icon.BackgroundTransparency = 1
-
-    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+    
+    TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.1}):Play()
     TweenService:Create(Label, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
     TweenService:Create(Icon, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
     TweenService:Create(NotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -110, 0.15, 0)}):Play()
-
+    
     task.delay(2.5, function()
         if NotifFrame then
             TweenService:Create(NotifFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1, Position = UDim2.new(0.5, -110, 0.1, 0)}):Play()
@@ -319,13 +315,13 @@ end
 
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.BackgroundColor3 = Theme.Background
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-MainFrame.Size = UDim2.new(0, 600, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -140) 
+MainFrame.Size = UDim2.new(0, 480, 0, 300) 
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.ClipsDescendants = false
+MainFrame.ClipsDescendants = false 
 MainFrame.BorderSizePixel = 0
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 AddStroke(MainFrame, Theme.Border, 1)
 
 local Shadow = Instance.new("ImageLabel", MainFrame)
@@ -344,119 +340,112 @@ Shadow.SliceScale = 1
 
 local Header = Instance.new("Frame", MainFrame)
 Header.BackgroundColor3 = Theme.Header
-Header.Size = UDim2.new(1, 0, 0, 36)
+Header.Size = UDim2.new(1, 0, 0, 36) 
 Header.BorderSizePixel = 0
 Header.ZIndex = 5
 local HeaderCorner = Instance.new("UICorner", Header)
-HeaderCorner.CornerRadius = UDim.new(0, 10)
+HeaderCorner.CornerRadius = UDim.new(0, 8)
 
--- Header bottom fix for rounded corners
-local HeaderFix = Instance.new("Frame", Header)
-HeaderFix.BackgroundColor3 = Theme.Header
-HeaderFix.BorderSizePixel = 0
-HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.Size = UDim2.new(1, 0, 0, 10)
-HeaderFix.ZIndex = 5
+local HeaderSquare = Instance.new("Frame", Header)
+HeaderSquare.BackgroundColor3 = Theme.Header
+HeaderSquare.BorderSizePixel = 0
+HeaderSquare.Position = UDim2.new(0,0,1,-8)
+HeaderSquare.Size = UDim2.new(1,0,0,8)
+
+local HeaderLine = Instance.new("Frame", Header)
+HeaderLine.BackgroundColor3 = Theme.Border
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Position = UDim2.new(0, 0, 1, 0)
+HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+HeaderLine.ZIndex = 6
 
 local TitleLab = Instance.new("TextLabel", Header)
 TitleLab.BackgroundTransparency = 1
 TitleLab.Position = UDim2.new(0, 15, 0, 0)
 TitleLab.Size = UDim2.new(0, 200, 1, 0)
 TitleLab.Font = Enum.Font.GothamBold
-TitleLab.Text = "🎣 ITG Webhook"
-TitleLab.TextColor3 = Theme.TextPrimary
-TitleLab.TextSize = 14
+TitleLab.Text = "ITG Webhook" 
+TitleLab.TextColor3 = Theme.Accent 
+TitleLab.TextSize = 14 
 TitleLab.TextXAlignment = "Left"
 TitleLab.ZIndex = 6
 
 local CloseBtn = Instance.new("TextButton", Header)
 CloseBtn.Name = "Close"
 CloseBtn.BackgroundTransparency = 1
-CloseBtn.Position = UDim2.new(1, -60, 0, 0)
-CloseBtn.Size = UDim2.new(0, 30, 1, 0)
+CloseBtn.Position = UDim2.new(1, -30, 0, 0)
+CloseBtn.Size = UDim2.new(0, 30, 1, 0) 
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "×"
+CloseBtn.Text = "×" 
 CloseBtn.TextColor3 = Theme.TextSecondary
 CloseBtn.TextSize = 22
 CloseBtn.ZIndex = 6
-CloseBtn.MouseEnter:Connect(function() 
-    CloseBtn.TextColor3 = Theme.TextPrimary
-    CloseBtn.BackgroundColor3 = Theme.Error
-    CloseBtn.BackgroundTransparency = 0
-end)
-CloseBtn.MouseLeave:Connect(function() 
-    CloseBtn.TextColor3 = Theme.TextSecondary
-    CloseBtn.BackgroundTransparency = 1
-end)
+CloseBtn.MouseEnter:Connect(function() CloseBtn.TextColor3 = Theme.Error end)
+CloseBtn.MouseLeave:Connect(function() CloseBtn.TextColor3 = Theme.TextSecondary end)
 
 local MinBtn = Instance.new("TextButton", Header)
 MinBtn.Name = "Minimize"
 MinBtn.BackgroundTransparency = 1
-MinBtn.Position = UDim2.new(1, -90, 0, 0)
+MinBtn.Position = UDim2.new(1, -60, 0, 0)
 MinBtn.Size = UDim2.new(0, 30, 1, 0)
 MinBtn.Font = Enum.Font.GothamBold
-MinBtn.Text = "−"
+MinBtn.Text = "−" 
 MinBtn.TextColor3 = Theme.TextSecondary
 MinBtn.TextSize = 22
 MinBtn.ZIndex = 6
-MinBtn.MouseEnter:Connect(function() 
-    MinBtn.TextColor3 = Theme.TextPrimary
-    MinBtn.BackgroundColor3 = Theme.Hover or Theme.Content
-    MinBtn.BackgroundTransparency = 0
-end)
-MinBtn.MouseLeave:Connect(function() 
-    MinBtn.TextColor3 = Theme.TextSecondary
-    MinBtn.BackgroundTransparency = 1
-end)
+MinBtn.MouseEnter:Connect(function() MinBtn.TextColor3 = Theme.TextPrimary end)
+MinBtn.MouseLeave:Connect(function() MinBtn.TextColor3 = Theme.TextSecondary end)
 
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.BackgroundColor3 = Theme.Sidebar
 Sidebar.Position = UDim2.new(0, 0, 0, 36)
-Sidebar.Size = UDim2.new(0, 140, 1, -36)
+Sidebar.Size = UDim2.new(0, 110, 1, -36) 
 Sidebar.BorderSizePixel = 0
 Sidebar.ZIndex = 2
 local SideCorner = Instance.new("UICorner", Sidebar)
-SideCorner.CornerRadius = UDim.new(0, 0)
+SideCorner.CornerRadius = UDim.new(0, 8)
+local SideSquare = Instance.new("Frame", Sidebar)
+SideSquare.BackgroundColor3 = Theme.Sidebar
+SideSquare.BorderSizePixel = 0
+SideSquare.Position = UDim2.new(1,-8,0,0)
+SideSquare.Size = UDim2.new(0,8,1,0)
 
--- Sidebar corner fix
-local SideCornerFix = Instance.new("Frame", Sidebar)
-SideCornerFix.BackgroundColor3 = Theme.Sidebar
-SideCornerFix.BorderSizePixel = 0
-SideCornerFix.Position = UDim2.new(1, -10, 0, 0)
-SideCornerFix.Size = UDim2.new(0, 10, 1, 0)
-SideCornerFix.ZIndex = 2
+local SideLine = Instance.new("Frame", Sidebar)
+SideLine.BackgroundColor3 = Theme.Border
+SideLine.BorderSizePixel = 0
+SideLine.Position = UDim2.new(1, -1, 0, 0)
+SideLine.Size = UDim2.new(0, 1, 1, 0)
+SideLine.ZIndex = 3
 
-local MenuContainer = Instance.new("ScrollingFrame", Sidebar)
+local MenuContainer = Instance.new("Frame", Sidebar)
 MenuContainer.BackgroundTransparency = 1
-MenuContainer.Size = UDim2.new(1, 0, 1, -25)
+MenuContainer.Size = UDim2.new(1, 0, 1, -25) 
 MenuContainer.Position = UDim2.new(0, 0, 0, 5)
 MenuContainer.ZIndex = 5
-MenuContainer.ScrollBarThickness = 0
 
 local SideLayout = Instance.new("UIListLayout", MenuContainer)
-SideLayout.Padding = UDim.new(0, 2)
+SideLayout.Padding = UDim.new(0, 2) 
 SideLayout.HorizontalAlignment = "Center"
 Instance.new("UIPadding", MenuContainer).PaddingTop = UDim.new(0, 8)
-Instance.new("UIPadding", MenuContainer).PaddingBottom = UDim.new(0, 8)
 
 
 local ContentContainer = Instance.new("Frame", MainFrame)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.Position = UDim2.new(0, 140, 0, 42)
-ContentContainer.Size = UDim2.new(1, -140, 1, -48)
+ContentContainer.Position = UDim2.new(0, 120, 0, 42)
+ContentContainer.Size = UDim2.new(1, -120, 1, -48) 
 ContentContainer.ZIndex = 3
 
 local ModalFrame = Instance.new("Frame", ScreenGui)
 ModalFrame.Name = "ModalConfirm"
-ModalFrame.BackgroundColor3 = Theme.Background
-ModalFrame.Size = UDim2.new(0, 280, 0, 140)
-ModalFrame.Position = UDim2.new(0.5, -140, 0.5, -70)
+ModalFrame.BackgroundColor3 = Theme.Header
+ModalFrame.Size = UDim2.new(0, 240, 0, 110)
+ModalFrame.Position = UDim2.new(0.5, -120, 0.5, -55) 
 ModalFrame.BorderSizePixel = 0
-ModalFrame.ZIndex = 100
+ModalFrame.ZIndex = 100 
 ModalFrame.Visible = false
 ModalFrame.Active = false
-Instance.new("UICorner", ModalFrame).CornerRadius = UDim.new(0, 10)
-AddStroke(ModalFrame, Theme.Border, 2)
+Instance.new("UICorner", ModalFrame).CornerRadius = UDim.new(0, 8)
+AddStroke(ModalFrame, Theme.Border, 1)
 
 local ModalShadow = Instance.new("ImageLabel", ModalFrame)
 ModalShadow.Name = "Shadow"
@@ -472,44 +461,34 @@ ModalShadow.SliceCenter = Rect.new(49, 49, 450, 450)
 
 local ModalTitle = Instance.new("TextLabel", ModalFrame)
 ModalTitle.BackgroundTransparency = 1
-ModalTitle.Position = UDim2.new(0, 0, 0, 20)
-ModalTitle.Size = UDim2.new(1, 0, 0, 30)
+ModalTitle.Position = UDim2.new(0, 0, 0, 18)
+ModalTitle.Size = UDim2.new(1, 0, 0, 20)
 ModalTitle.Font = Enum.Font.GothamBold
 ModalTitle.Text = "Close Script?"
 ModalTitle.TextColor3 = Theme.TextPrimary
-ModalTitle.TextSize = 18
+ModalTitle.TextSize = 16 
 ModalTitle.ZIndex = 102
-
-local ModalDesc = Instance.new("TextLabel", ModalFrame)
-ModalDesc.BackgroundTransparency = 1
-ModalDesc.Position = UDim2.new(0, 0, 0, 50)
-ModalDesc.Size = UDim2.new(1, 0, 0, 20)
-ModalDesc.Font = Enum.Font.GothamMedium
-ModalDesc.Text = "Are you sure you want to close?"
-ModalDesc.TextColor3 = Theme.TextSecondary
-ModalDesc.TextSize = 12
-ModalDesc.ZIndex = 102
 
 local BtnYes = Instance.new("TextButton", ModalFrame)
 BtnYes.BackgroundColor3 = Theme.Error
-BtnYes.Position = UDim2.new(0, 20, 1, -45)
-BtnYes.Size = UDim2.new(0, 110, 0, 35)
-BtnYes.Font = Enum.Font.GothamBold
-BtnYes.Text = "Yes, Close"
-BtnYes.TextColor3 = Theme.TextPrimary
-BtnYes.TextSize = 13
+BtnYes.Position = UDim2.new(0, 20, 1, -40)
+BtnYes.Size = UDim2.new(0, 95, 0, 28)
+BtnYes.Font = Enum.Font.GothamBold 
+BtnYes.Text = "Yes"
+BtnYes.TextColor3 = Color3.new(1, 1, 1)
+BtnYes.TextSize = 13 
 BtnYes.ZIndex = 102
 BtnYes.Active = true
 Instance.new("UICorner", BtnYes).CornerRadius = UDim.new(0, 6)
 
 local BtnNo = Instance.new("TextButton", ModalFrame)
 BtnNo.BackgroundColor3 = Theme.Content
-BtnNo.Position = UDim2.new(1, -130, 1, -45)
-BtnNo.Size = UDim2.new(0, 110, 0, 35)
-BtnNo.Font = Enum.Font.GothamBold
-BtnNo.Text = "Cancel"
+BtnNo.Position = UDim2.new(1, -115, 1, -40)
+BtnNo.Size = UDim2.new(0, 95, 0, 28)
+BtnNo.Font = Enum.Font.GothamBold 
+BtnNo.Text = "No"
 BtnNo.TextColor3 = Theme.TextPrimary
-BtnNo.TextSize = 13
+BtnNo.TextSize = 13 
 BtnNo.ZIndex = 102
 BtnNo.Active = true
 Instance.new("UICorner", BtnNo).CornerRadius = UDim.new(0, 6)
@@ -520,26 +499,17 @@ local function CreatePage(name)
     Page.Name = "Page_" .. name
     Page.BackgroundTransparency = 1
     Page.Size = UDim2.new(1, 0, 1, 0)
-    Page.ScrollBarThickness = 6
+    Page.ScrollBarThickness = 3
     Page.ScrollBarImageColor3 = Theme.Accent
     Page.Visible = false
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
     Page.AutomaticCanvasSize = "Y"
     Page.ZIndex = 4
-    Page.BottomImage = "rbxassetid://6652743245"
-    Page.TopImage = "rbxassetid://6652743245"
-    Page.MidImage = "rbxassetid://6652743245"
-
-    local layout = Instance.new("UIListLayout", Page)
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
     
-    local padding = Instance.new("UIPadding", Page)
-    padding.PaddingLeft = UDim.new(0, 10)
-    padding.PaddingRight = UDim.new(0, 10)
-    padding.PaddingTop = UDim.new(0, 10)
-    padding.PaddingBottom = UDim.new(0, 10)
-
+    local layout = Instance.new("UIListLayout", Page)
+    layout.Padding = UDim.new(0, 6) 
+    layout.SortOrder = Enum.SortOrder.LayoutOrder 
+    
     return Page
 end
 
@@ -555,24 +525,24 @@ local Page_Setting
 Page_Webhook.Visible = false
 
 local function CreateTab(name, target, isDefault)
-    local TabBtn = Instance.new("TextButton", MenuContainer)
-    TabBtn.BackgroundColor3 = Theme.Content
-    TabBtn.BackgroundTransparency = 1
-    TabBtn.Size = UDim2.new(1, -10, 0, 32)
-    TabBtn.Font = Enum.Font.GothamMedium
+    local TabBtn = Instance.new("TextButton", MenuContainer) 
+    TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
+    TabBtn.BackgroundTransparency = 1 
+    TabBtn.Size = UDim2.new(1, -10, 0, 26) 
+    TabBtn.Font = Enum.Font.GothamMedium 
     TabBtn.Text = name
     TabBtn.TextColor3 = Theme.TextSecondary
-    TabBtn.TextSize = 13
-    TabBtn.ZIndex = 5
-    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
-
+    TabBtn.TextSize = 11
+    TabBtn.ZIndex = 3
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
+    
     local Indicator = Instance.new("Frame", TabBtn)
     Indicator.Name = "ActiveIndicator"
-    Indicator.BackgroundColor3 = Theme.TextPrimary
+    Indicator.BackgroundColor3 = Theme.Accent
     Indicator.BorderSizePixel = 0
-    Indicator.Position = UDim2.new(0, 0, 0.5, -8)
-    Indicator.Size = UDim2.new(0, 3, 0, 16)
-    Indicator.Visible = false
+    Indicator.Position = UDim2.new(0, 2, 0.5, -8) 
+    Indicator.Size = UDim2.new(0, 3, 0, 16) 
+    Indicator.Visible = false 
     Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
 
     TabBtn.MouseButton1Click:Connect(function()
@@ -584,28 +554,27 @@ local function CreateTab(name, target, isDefault)
         target.Visible = true
 
         for _, child in pairs(MenuContainer:GetChildren()) do
-            if child:IsA("TextButton") then
+            if child:IsA("TextButton") then 
                 child.TextColor3 = Theme.TextSecondary
-                child.Font = Enum.Font.GothamMedium
+                child.Font = Enum.Font.GothamMedium 
                 child.BackgroundTransparency = 1
-                child.BackgroundColor3 = Theme.Content
                 local line = child:FindFirstChild("ActiveIndicator")
                 if line then line.Visible = false end
             end
         end
-
+        
         TabBtn.TextColor3 = Theme.TextPrimary
         TabBtn.Font = Enum.Font.GothamBold
-        TabBtn.BackgroundTransparency = 0
-        TabBtn.BackgroundColor3 = Theme.Active or Theme.Header
-        Indicator.Visible = true
+        TabBtn.BackgroundTransparency = 0.95 
+        TabBtn.BackgroundColor3 = Theme.TextPrimary
+        Indicator.Visible = true 
     end)
 
     if isDefault then
         TabBtn.TextColor3 = Theme.TextPrimary
         TabBtn.Font = Enum.Font.GothamBold
-        TabBtn.BackgroundTransparency = 0
-        TabBtn.BackgroundColor3 = Theme.Active or Theme.Header
+        TabBtn.BackgroundTransparency = 0.95
+        TabBtn.BackgroundColor3 = Theme.TextPrimary
         Indicator.Visible = true
         target.Visible = true
     end
@@ -632,26 +601,18 @@ local function CreateTeleportButton(parent, text, pos, size, callback)
     Frame.BorderSizePixel = 0
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     AddStroke(Frame, Theme.Border, 1)
-
+    
     local Btn = Instance.new("TextButton", Frame)
     Btn.BackgroundColor3 = Theme.Accent
-    Btn.BackgroundTransparency = 0
+    Btn.BackgroundTransparency = 0.1
     Btn.Size = UDim2.new(1, -10, 1, -10)
     Btn.Position = UDim2.new(0, 5, 0, 5)
     Btn.Font = Enum.Font.GothamBold
-    Btn.Text = "📍 " .. text
-    Btn.TextColor3 = Theme.TextPrimary
+    Btn.Text = text
+    Btn.TextColor3 = Color3.new(1,1,1)
     Btn.TextSize = 11
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
-
-    -- Hover effect
-    Btn.MouseEnter:Connect(function()
-        Btn.BackgroundColor3 = Theme.AccentHover or Theme.Accent
-    end)
-    Btn.MouseLeave:Connect(function()
-        Btn.BackgroundColor3 = Theme.Accent
-    end)
-
+    
     Btn.MouseButton1Click:Connect(callback)
     return Btn
 end
@@ -696,64 +657,49 @@ local function CreateToggle(parent, text, settingKey, callback, validationFunc)
     local Frame = Instance.new("Frame", parent)
     Frame.BackgroundColor3 = Theme.Content
     Frame.BackgroundTransparency = 0
-    Frame.Size = UDim2.new(1, -5, 0, 42)
+    Frame.Size = UDim2.new(1, -5, 0, 36) 
     Frame.BorderSizePixel = 0
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     AddStroke(Frame, Theme.Border, 1)
 
     local Label = Instance.new("TextLabel", Frame)
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(0, 280, 1, 0)
-    Label.Font = Enum.Font.GothamMedium
-    Label.Text = text
-    Label.TextColor3 = Theme.TextPrimary
-    Label.TextSize = 13
-    Label.TextXAlignment = "Left"
-
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 180, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = text; Label.TextColor3 = Theme.TextPrimary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    
     local default = Settings[settingKey] or false
-
-    -- Discord-style Toggle Switch
-    local Switch = Instance.new("Frame", Frame)
+    
+    local Switch = Instance.new("TextButton", Frame)
     Switch.BackgroundColor3 = default and Theme.Success or Theme.Input
-    Switch.Position = UDim2.new(1, -52, 0.5, -11)
-    Switch.Size = UDim2.new(0, 40, 0, 22)
+    Switch.BackgroundTransparency = 0; Switch.Position = UDim2.new(1, -45, 0.5, -10); Switch.Size = UDim2.new(0, 36, 0, 20); Switch.Text = ""
     Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
-
+    
     local Circle = Instance.new("Frame", Switch)
-    Circle.BackgroundColor3 = Theme.TextPrimary
-    Circle.Position = default and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
-    Circle.Size = UDim2.new(0, 18, 0, 18)
+    Circle.BackgroundColor3 = Color3.new(1,1,1)
+    Circle.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8); Circle.Size = UDim2.new(0, 16, 0, 16)
     Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
-
+    
     local function UpdateUI(state)
         local targetColor = state and Theme.Success or Theme.Input
-        local targetPos = state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+        local targetPos = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        
         TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
         Circle:TweenPosition(targetPos, "Out", "Sine", 0.15, true)
     end
-
+    
     ToggleRegistry[settingKey] = function(val)
         UpdateUI(val)
         if callback then callback(val) end
     end
 
-    local ClickBtn = Instance.new("TextButton", Frame)
-    ClickBtn.BackgroundTransparency = 1
-    ClickBtn.Size = UDim2.new(1, 0, 1, 0)
-    ClickBtn.Text = ""
-    ClickBtn.ZIndex = 10
-
-    ClickBtn.MouseButton1Click:Connect(function()
+    Switch.MouseButton1Click:Connect(function()
         local n = not (Switch.BackgroundColor3 == Theme.Success)
-        if n and validationFunc and not validationFunc() then 
-            ShowNotification("Webhook Empty!", true) 
-            return 
-        end
-
+        if n and validationFunc and not validationFunc() then ShowNotification("Webhook Empty!", true) return end
+        
         Settings[settingKey] = n
+        
         UpdateUI(n)
         if callback then callback(n) end
+        
         ShowNotification(text .. (n and " Enabled" or " Disabled"))
     end)
 end
@@ -762,97 +708,49 @@ local function CreateActionWithLabel(parent, labelText, btnText, btnColor, callb
     local Frame = Instance.new("Frame", parent)
     Frame.BackgroundColor3 = Theme.Content
     Frame.BackgroundTransparency = 0
-    Frame.Size = UDim2.new(1, -5, 0, 42)
+    Frame.Size = UDim2.new(1, -5, 0, 36) 
     Frame.BorderSizePixel = 0
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     AddStroke(Frame, Theme.Border, 1)
 
     local Label = Instance.new("TextLabel", Frame)
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 12, 0, 0)
-    Label.Size = UDim2.new(0, 280, 1, 0)
-    Label.Font = Enum.Font.GothamMedium
-    Label.Text = labelText
-    Label.TextColor3 = Theme.TextPrimary
-    Label.TextSize = 13
-    Label.TextXAlignment = "Left"
-
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 180, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = labelText; Label.TextColor3 = Theme.TextPrimary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    
     local Btn = Instance.new("TextButton", Frame)
-    Btn.BackgroundColor3 = btnColor
-    Btn.BackgroundTransparency = 0
-    Btn.Position = UDim2.new(1, -90, 0.5, -14)
-    Btn.Size = UDim2.new(0, 80, 0, 28)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Text = btnText
-    Btn.TextColor3 = Theme.TextPrimary
-    Btn.TextSize = 12
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-
-    -- Hover effect
-    Btn.MouseEnter:Connect(function()
-        Btn.BackgroundColor3 = Color3.new(
-            math.min(btnColor.R + 0.1, 1),
-            math.min(btnColor.G + 0.1, 1),
-            math.min(btnColor.B + 0.1, 1)
-        )
-    end)
-    Btn.MouseLeave:Connect(function()
-        Btn.BackgroundColor3 = btnColor
-    end)
-
+    Btn.BackgroundColor3 = btnColor; Btn.BackgroundTransparency = 0.1; Btn.Position = UDim2.new(1, -80, 0.5, -11); Btn.Size = UDim2.new(0, 70, 0, 22)
+    Btn.Font = Enum.Font.GothamBold; Btn.Text = btnText; Btn.TextColor3 = Color3.new(1, 1, 1); Btn.TextSize = 11
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    
     Btn.MouseButton1Click:Connect(callback)
 end
 
 local function CreateInput(parent, placeholder, default, callback, height)
     local Frame = Instance.new("Frame", parent)
     Frame.BackgroundColor3 = Theme.Content
-    local finalHeight = height and (height - 2) or 38
-    Frame.Size = UDim2.new(1, -5, 0, finalHeight)
-    Frame.BorderSizePixel = 0
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    local finalHeight = height and (height - 2) or 32 
+    Frame.Size = UDim2.new(1, -5, 0, finalHeight); Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     AddStroke(Frame, Theme.Border, 1)
 
     local Label = Instance.new("TextLabel", Frame)
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 12, 0, 0)
-    Label.Size = UDim2.new(0, 120, 1, 0)
-    Label.Font = Enum.Font.GothamBold
-    Label.Text = placeholder
-    Label.TextColor3 = Theme.TextPrimary
-    Label.TextSize = 12
-    Label.TextXAlignment = "Left"
-    
-    local inputX = (finalHeight > 36) and 140 or 140
-    local inputWidth = (finalHeight > 36) and 170 or 160
-    
+    Label.BackgroundTransparency = 1; Label.Position = UDim2.new(0, 10, 0, 0); Label.Size = UDim2.new(0, 140, 1, 0)
+    Label.Font = Enum.Font.GothamBold; Label.Text = placeholder; Label.TextColor3 = Theme.TextSecondary; Label.TextSize = 12; Label.TextXAlignment = "Left"
+    local inputX = (finalHeight > 34) and 160 or 150
+    local inputWidth = (finalHeight > 34) and 170 or 160
     local InputBg = Instance.new("Frame", Frame)
     InputBg.BackgroundColor3 = Theme.Input
-    InputBg.Position = UDim2.new(0, inputX, 0.5, -14)
-    InputBg.Size = UDim2.new(1, -inputWidth, 0, 28)
+    InputBg.Position = UDim2.new(0, inputX, 0.5, -10)
+    InputBg.Size = UDim2.new(1, -inputWidth, 0, 20)
     InputBg.ClipsDescendants = true
-    Instance.new("UICorner", InputBg).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", InputBg).CornerRadius = UDim.new(0, 4)
+    AddStroke(InputBg, Theme.Border, 1)
 
     local Input = Instance.new("TextBox", InputBg)
-    Input.BackgroundTransparency = 1
-    Input.Position = UDim2.new(0, 8, 0, 0)
-    Input.Size = UDim2.new(1, -16, 1, 0)
-    Input.Font = Enum.Font.GothamMedium
-    Input.Text = default or ""
-    Input.PlaceholderText = "Paste here..."
-    Input.PlaceholderColor3 = Theme.TextSecondary
-    Input.TextColor3 = Theme.TextPrimary
-    Input.TextSize = 12
-    Input.TextXAlignment = "Left"
-    Input.ClearTextOnFocus = false
-    
-    Input.Focused:Connect(function() 
-        AddStroke(InputBg, Theme.Accent, 2) 
-    end)
-    Input.FocusLost:Connect(function()
-        AddStroke(InputBg, Theme.Border, 1)
-        if callback then callback(Input.Text, Input) end
-    end)
-
+    Input.BackgroundTransparency = 1; Input.Position = UDim2.new(0, 5, 0, 0); Input.Size = UDim2.new(1, -10, 1, 0)
+    Input.Font = Enum.Font.GothamMedium; Input.Text = default; Input.PlaceholderText = "Paste here..."; Input.TextColor3 = Theme.TextPrimary; Input.TextSize = 11; Input.TextXAlignment = "Left"; Input.ClearTextOnFocus = false
+    Input.Focused:Connect(function() AddStroke(InputBg, Theme.Accent, 1) end)
+    Input.FocusLost:Connect(function() AddStroke(InputBg, Theme.Border, 1) callback(Input.Text, Input) end)
     return Input
 end
 
@@ -2106,27 +2004,20 @@ end
 
 if RealIconAsset == "" then RealIconAsset = "rbxassetid://0" end 
 
-local OpenBtn = Instance.new("ImageButton", ScreenGui)
+local OpenBtn = Instance.new("ImageButton", ScreenGui) 
 OpenBtn.Name = "OpenBtn"
-OpenBtn.BackgroundColor3 = Theme.Accent
-OpenBtn.Size = UDim2.new(0, 45, 0, 45)
-OpenBtn.Position = UDim2.new(0, 20, 0, 80)
-OpenBtn.Image = RealIconAsset
+OpenBtn.BackgroundColor3 = Theme.Background
+OpenBtn.Size = UDim2.new(0, 40, 0, 40) 
+OpenBtn.Position = UDim2.new(0, 22, 0, 75) 
+OpenBtn.Image = RealIconAsset 
 OpenBtn.Visible = true
 OpenBtn.Active = true
 OpenBtn.Draggable = true
-OpenBtn.ScaleType = Enum.ScaleType.Fit
+OpenBtn.ScaleType = Enum.ScaleType.Fit 
 OpenBtn.SliceScale = 1
-Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 10)
-AddStroke(OpenBtn, Theme.Border, 1)
 
--- Hover effect for OpenBtn
-OpenBtn.MouseEnter:Connect(function()
-    OpenBtn.BackgroundColor3 = Theme.AccentHover or Theme.Accent
-end)
-OpenBtn.MouseLeave:Connect(function()
-    OpenBtn.BackgroundColor3 = Theme.Accent
-end)
+Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
+AddStroke(OpenBtn, Theme.Border, 1)
 
 OpenBtn.MouseButton1Click:Connect(function()
      MainFrame.Visible = not MainFrame.Visible
@@ -2607,9 +2498,7 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
-print("✅ ITG System Discord UI v2.0 Loaded!")
-print("🎨 Theme: Discord Style (Blurple Accent)")
-print("📊 All original functions preserved")
+print("✅ ITG System Session v1.0 Loaded!")
 
 task.delay(1, function()
     local autoPref = GetAutoLoadPref()
