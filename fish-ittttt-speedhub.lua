@@ -16,7 +16,7 @@ end
 if not SpeedHubUI then
     warn("SpeedHubUI library not found!")
     -- Fallback: embed library langsung
-    SpeedHubUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/SpeedHubUI/main/SpeedHubUI.lua"))()
+    SpeedHubUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/NikeeTXC/adbae/refs/heads/main/SpeedHubUI"))()
 end
 
 -- Services
