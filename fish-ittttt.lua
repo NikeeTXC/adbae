@@ -135,13 +135,13 @@ local FishingAreas = {
     ["Volcanic Cavern"] = {Pos = Vector3.new(1249.005, 82.830, -10224.920), Look = Vector3.new(-0.649, -0.666, 0.368)},
 }
 
-local Settings = { 
-    SecretEnabled = false, 
-    RubyEnabled = false, 
+local Settings = {
+    SecretEnabled = false,
+    RubyEnabled = false,
 
     MutationCrystalized = false,
     CaveCrystalEnabled = false,
-    LeaveEnabled = false, 
+    LeaveEnabled = false,
     PlayerNonPSAuto = false,
     ForeignDetection = false,
     SpoilerName = true,
@@ -150,7 +150,13 @@ local Settings = {
     NoAnimation = false,
     RemoveVFX = false,
     DisablePopups = false,
-    EvolvedEnabled = false
+    EvolvedEnabled = false,
+    
+    -- Instant Fishing Settings
+    InstantFishingEnabled = false,
+    InstantFishingCompleteDelay = 0.7,
+    InstantFishingCastDelay = 0.1,
+    InstantFishingClaimAmount = 3
 }
 
 task.spawn(function()
@@ -180,7 +186,7 @@ task.spawn(function()
                     pcall(function()
                         queueTeleport([[
                             task.wait(5)
-                            local paths = {"NikeeHUB/FishIt/Fishit.lua", "Fishit.lua", "FishIt/Fishit.lua"}
+                            local paths = {"XAL CLOUD/FishIt/47.lua", "47.lua", "FishIt/47.lua"}
                             local scriptCode = nil
                             for _, p in ipairs(paths) do
                                 local s, c = pcall(function() return readfile(p) end)
@@ -915,6 +921,235 @@ CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     end
 end)
 
+-- Instant Fishing Configuration
+local FishingRemotes = {
+    Charge = nil,
+    Request = nil,
+    Cancel = nil,
+    Claim = nil
+}
+
+local FishingRemotesInitialized = false
+
+local function InitializeFishingRemotes()
+    if FishingRemotesInitialized then return true end
+    
+    local success, result = pcall(function()
+        local NetPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
+        if NetPath then
+            FishingRemotes.Charge = NetPath:WaitForChild("RF/ChargeFishingRod", 3)
+            FishingRemotes.Request = NetPath:WaitForChild("RF/RequestFishingMinigameStarted", 3)
+            FishingRemotes.Cancel = NetPath:WaitForChild("RF/CancelFishingInputs", 3)
+            FishingRemotes.Claim = NetPath:WaitForChild("RF/CatchFishCompleted", 3)
+            
+            if FishingRemotes.Charge and FishingRemotes.Request and FishingRemotes.Cancel and FishingRemotes.Claim then
+                FishingRemotesInitialized = true
+                return true
+            end
+        end
+        return false
+    end)
+    
+    return success and result
+end
+
+local InstantFishingActive = false
+local InstantFishingThread = nil
+
+local function StartInstantFishingCycle()
+    if InstantFishingThread then
+        task.cancel(InstantFishingThread)
+        InstantFishingThread = nil
+    end
+    
+    -- Initialize remotes first
+    if not InitializeFishingRemotes() then
+        ShowNotification("Failed to initialize fishing remotes!", true)
+        Settings.InstantFishingEnabled = false
+        return
+    end
+    
+    InstantFishingActive = true
+    
+    InstantFishingThread = task.spawn(function()
+        while Settings.InstantFishingEnabled and ScriptActive and InstantFishingActive do
+            local success, err = pcall(function()
+                -- Step 1: Cancel any existing state
+                if FishingRemotes.Cancel then
+                    pcall(function() FishingRemotes.Cancel:InvokeServer() end)
+                end
+
+                -- Step 2: Charge the rod
+                if FishingRemotes.Charge then
+                    pcall(function() FishingRemotes.Charge:InvokeServer() end)
+                end
+
+                -- Step 3: Request Minigame
+                if FishingRemotes.Request then
+                    local args = {
+                        -1.233184814453125,
+                        0.0017426679483021346,
+                        tick()
+                    }
+                    pcall(function()
+                        FishingRemotes.Request:InvokeServer(unpack(args))
+                    end)
+                end
+
+                -- Step 4: Wait for the lure to stay in water
+                task.wait(Settings.InstantFishingCompleteDelay or 0.7)
+
+                -- Step 5: Claim Reward (Optimized loop)
+                local claimAmount = Settings.InstantFishingClaimAmount or 3
+                for i = 1, claimAmount do
+                    task.spawn(function()
+                        if FishingRemotes.Claim then
+                            pcall(function()
+                                FishingRemotes.Claim:InvokeServer()
+                            end)
+                        end
+                    end)
+                end
+
+                -- Step 6: Cast Delay before next cycle
+                task.wait(Settings.InstantFishingCastDelay or 0.1)
+            end)
+            
+            if not success then
+                warn("Instant Fishing Error:", err)
+                task.wait(1)
+            end
+        end
+    end)
+end
+
+local function StopInstantFishing()
+    InstantFishingActive = false
+    if InstantFishingThread then
+        task.cancel(InstantFishingThread)
+        InstantFishingThread = nil
+    end
+end
+
+-- Instant Fishing UI Section
+local InstantFishingSection = Instance.new("Frame", Page_Fhising)
+InstantFishingSection.BackgroundTransparency = 1
+InstantFishingSection.Size = UDim2.new(1, -5, 0, 30)
+InstantFishingSection.LayoutOrder = 10
+
+local InstantFishingLabel = Instance.new("TextLabel", InstantFishingSection)
+InstantFishingLabel.BackgroundTransparency = 1
+InstantFishingLabel.Size = UDim2.new(1, 0, 0, 20)
+InstantFishingLabel.Font = Enum.Font.GothamBold
+InstantFishingLabel.Text = "⚡ Instant Fishing"
+InstantFishingLabel.TextColor3 = Theme.Accent
+InstantFishingLabel.TextSize = 12
+InstantFishingLabel.TextXAlignment = "Left"
+
+CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", function(state)
+    Settings.InstantFishingEnabled = state
+    if state then
+        -- Initialize remotes first
+        local initSuccess = InitializeFishingRemotes()
+        
+        -- Check if remotes are available
+        if not initSuccess or not FishingRemotes.Charge or not FishingRemotes.Request or not FishingRemotes.Cancel or not FishingRemotes.Claim then
+            ShowNotification("Fishing Remotes Missing!", true)
+            Settings.InstantFishingEnabled = false
+            if ToggleRegistry["InstantFishingEnabled"] then
+                ToggleRegistry["InstantFishingEnabled"](false)
+            end
+            return
+        end
+        
+        StartInstantFishingCycle()
+        ShowNotification("Instant Fishing Enabled", false)
+    else
+        StopInstantFishing()
+        ShowNotification("Instant Fishing Disabled", false)
+    end
+end)
+
+-- Create input fields for Instant Fishing settings
+local function CreateInstantFishingInput(parent, labelText, placeholder, defaultValue, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.BackgroundColor3 = Theme.Content
+    Frame.Size = UDim2.new(1, -5, 0, 32)
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    AddStroke(Frame, Theme.Border, 1)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Size = UDim2.new(0, 140, 1, 0)
+    Label.Font = Enum.Font.GothamBold
+    Label.Text = labelText
+    Label.TextColor3 = Theme.TextPrimary
+    Label.TextSize = 12
+    Label.TextXAlignment = "Left"
+
+    local InputBg = Instance.new("Frame", Frame)
+    InputBg.BackgroundColor3 = Theme.Input
+    InputBg.Position = UDim2.new(0, 150, 0.5, -10)
+    InputBg.Size = UDim2.new(1, -160, 0, 20)
+    InputBg.ClipsDescendants = true
+    Instance.new("UICorner", InputBg).CornerRadius = UDim.new(0, 4)
+    AddStroke(InputBg, Theme.Border, 1)
+
+    local Input = Instance.new("TextBox", InputBg)
+    Input.BackgroundTransparency = 1
+    Input.Position = UDim2.new(0, 5, 0, 0)
+    Input.Size = UDim2.new(1, -10, 1, 0)
+    Input.Font = Enum.Font.GothamMedium
+    Input.Text = tostring(defaultValue)
+    Input.PlaceholderText = placeholder
+    Input.TextColor3 = Theme.TextPrimary
+    Input.TextSize = 11
+    Input.TextXAlignment = "Left"
+    Input.ClearTextOnFocus = false
+
+    Input.Focused:Connect(function()
+        AddStroke(InputBg, Theme.Accent, 1)
+    end)
+
+    Input.FocusLost:Connect(function()
+        AddStroke(InputBg, Theme.Border, 1)
+        callback(Input.Text, Input)
+    end)
+
+    return Input
+end
+
+local InstantFishingInputs = Instance.new("Frame", Page_Fhising)
+InstantFishingInputs.BackgroundTransparency = 1
+InstantFishingInputs.Size = UDim2.new(1, -5, 0, 110)
+InstantFishingInputs.LayoutOrder = 11
+
+local CompleteDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Complete Delay (s)", "e.g. 0.7", Settings.InstantFishingCompleteDelay, function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingCompleteDelay = val
+        ShowNotification("Complete Delay set to " .. val, false)
+    end
+end)
+
+local CastDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Cast Delay (s)", "e.g. 0.1", Settings.InstantFishingCastDelay, function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingCastDelay = val
+        ShowNotification("Cast Delay set to " .. val, false)
+    end
+end)
+
+local ClaimAmountInput = CreateInstantFishingInput(InstantFishingInputs, "Claim Amount", "e.g. 3", Settings.InstantFishingClaimAmount, function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingClaimAmount = math.floor(val)
+        ShowNotification("Claim Amount set to " .. Settings.InstantFishingClaimAmount, false)
+    end
+end)
+
 local AutoSellEnabled = false
 local SellMethod = "Count" 
 local SellValue = 600 
@@ -1340,12 +1575,13 @@ end
 SaveBtn.MouseButton1Click:Connect(function()
     local name = SaveInput.Text
     if name == "" then ShowNotification("Name cannot be empty!", true) return end
-    
+
     local validKeys = {
-        "SecretEnabled", "RubyEnabled", "MutationCrystalized", "CaveCrystalEnabled", 
-        "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName", 
-        "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups", 
-        "EvolvedEnabled"
+        "SecretEnabled", "RubyEnabled", "MutationCrystalized", "CaveCrystalEnabled",
+        "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName",
+        "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups",
+        "EvolvedEnabled", "InstantFishingEnabled", "InstantFishingCompleteDelay",
+        "InstantFishingCastDelay", "InstantFishingClaimAmount"
     }
     
     local cleanSettings = {}
@@ -2497,7 +2733,7 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
-print("NikeeHUB Beta Loaded")
+print("✅ NikeeHUB System Session v1.0 Loaded!")
 
 task.delay(1, function()
     local autoPref = GetAutoLoadPref()
