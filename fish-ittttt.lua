@@ -2123,18 +2123,16 @@ end)
 -- Icon Button (Roblox Asset ID - Paling Compatible!)
 local OpenBtn = Instance.new("ImageButton", ScreenGui)
 OpenBtn.Name = "OpenBtn"
-OpenBtn.BackgroundColor3 = Theme.Background
+OpenBtn.BackgroundTransparency = 1 -- No background box
 OpenBtn.Size = UDim2.new(0, 40, 0, 40)
 OpenBtn.Position = UDim2.new(0, 22, 0, 75)
 OpenBtn.Image = "rbxassetid://82148170615791" -- Nikee Logo
+OpenBtn.ImageTransparency = 0
 OpenBtn.Visible = true
 OpenBtn.Active = true
 OpenBtn.Draggable = true
 OpenBtn.ScaleType = Enum.ScaleType.Fit
 OpenBtn.SliceScale = 1
-
-Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
-AddStroke(OpenBtn, Theme.Border, 1)
 
 OpenBtn.MouseButton1Click:Connect(function()
      MainFrame.Visible = not MainFrame.Visible
