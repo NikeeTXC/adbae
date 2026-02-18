@@ -2154,7 +2154,7 @@ end
 
 -- Jika tetap gagal, gunakan asset default
 if OpenBtn.Image == "" or not OpenBtn.Image then
-    OpenBtn.Image = "rbxassetid://104703460799995" -- Generic icon
+    OpenBtn.Image = "rbxassetid://81840624411657" -- Generic icon
 end
 
 OpenBtn.Visible = true
