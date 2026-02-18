@@ -133,6 +133,7 @@ local FishingAreas = {
     ["Underground Cellar"] = {Pos = Vector3.new(2118.417, -91.448, -733.800), Look = Vector3.new(0.854, 0.000, 0.521)},
     ["Volcano"] = {Pos = Vector3.new(-552.797, 21.174, 186.940), Look = Vector3.new(-0.251, -0.534, -0.808)},
     ["Volcanic Cavern"] = {Pos = Vector3.new(1249.005, 82.830, -10224.920), Look = Vector3.new(-0.649, -0.666, 0.368)},
+    ["Heartfelt Island"] = {Pos = Vector3.new(1114.075, 4.846, 2712.839), Look = Vector3.new(0.995, 0.000, -0.103)},
 }
 
 local Settings = {
@@ -2185,7 +2186,7 @@ SendStatsBtn.TextColor3 = Color3.new(1, 1, 1)
 SendStatsBtn.TextSize = 11
 Instance.new("UICorner", SendStatsBtn).CornerRadius = UDim.new(0, 6)
 
-local ServerTitle = "XALSCENT"
+local ServerTitle = "NikeeHUB"
 CreateInput(Page_SessionStats, "Server Title", ServerTitle, function(v) ServerTitle = v end)
 CreateStatItem(Page_SessionStats, "Secret Fish Caught", "Secret")
 CreateStatItem(Page_SessionStats, "Ruby Gemstones", "Ruby")
