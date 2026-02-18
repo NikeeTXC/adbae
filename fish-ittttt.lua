@@ -180,7 +180,7 @@ task.spawn(function()
                     pcall(function()
                         queueTeleport([[
                             task.wait(5)
-                            local paths = {"XAL CLOUD/FishIt/47.lua", "47.lua", "FishIt/47.lua"}
+                            local paths = {"NikeeHUB/FishIt/Fishit.lua", "Fishit.lua", "FishIt/Fishit.lua"}
                             local scriptCode = nil
                             for _, p in ipairs(paths) do
                                 local s, c = pcall(function() return readfile(p) end)
@@ -2497,7 +2497,7 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
-print("✅ NikeeHUB System Session v1.0 Loaded!")
+print("NikeeHUB Beta Loaded")
 
 task.delay(1, function()
     local autoPref = GetAutoLoadPref()
