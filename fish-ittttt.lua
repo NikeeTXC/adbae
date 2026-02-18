@@ -921,139 +921,71 @@ CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     end
 end)
 
--- Instant Fishing Configuration
-local FishingRemotes = {
-    Charge = nil,
-    Request = nil,
-    Cancel = nil,
-    Claim = nil
-}
-
-local FishingRemotesInitialized = false
-
-local function InitializeFishingRemotes()
-    if FishingRemotesInitialized then return true end
-    
-    local success, result = pcall(function()
-        local NetPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
-        if NetPath then
-            FishingRemotes.Charge = NetPath:WaitForChild("RF/ChargeFishingRod", 3)
-            FishingRemotes.Request = NetPath:WaitForChild("RF/RequestFishingMinigameStarted", 3)
-            FishingRemotes.Cancel = NetPath:WaitForChild("RF/CancelFishingInputs", 3)
-            FishingRemotes.Claim = NetPath:WaitForChild("RF/CatchFishCompleted", 3)
-            
-            if FishingRemotes.Charge and FishingRemotes.Request and FishingRemotes.Cancel and FishingRemotes.Claim then
-                FishingRemotesInitialized = true
-                return true
-            end
+-- Instant Fishing - Load from external to save local vars
+local function IF_Load()
+    local code = [[
+local IF_R={Charge=nil,Request=nil,Cancel=nil,Claim=nil}
+local IF_I=false
+local IF_A=false
+local IF_T=nil
+local function IF_Init()
+    if IF_I then return true end
+    local s,r=pcall(function()
+        local np=game:GetService("ReplicatedStorage"):WaitForChild("Packages",5):WaitForChild("_Index",5):WaitForChild("sleitnick_net@0.2.0",5):WaitForChild("net",5)
+        if np then
+            IF_R.Charge=np:WaitForChild("RF/ChargeFishingRod",3)
+            IF_R.Request=np:WaitForChild("RF/RequestFishingMinigameStarted",3)
+            IF_R.Cancel=np:WaitForChild("RF/CancelFishingInputs",3)
+            IF_R.Claim=np:WaitForChild("RF/CatchFishCompleted",3)
+            IF_I=IF_R.Charge and IF_R.Request and IF_R.Cancel and IF_R.Claim
+            return IF_I
         end
         return false
     end)
-    
-    return success and result
+    return s and r
 end
-
-local InstantFishingActive = false
-local InstantFishingThread = nil
-
-local function StartInstantFishingCycle()
-    if InstantFishingThread then
-        task.cancel(InstantFishingThread)
-        InstantFishingThread = nil
-    end
-    
-    -- Initialize remotes first
-    if not InitializeFishingRemotes() then
-        ShowNotification("Failed to initialize fishing remotes!", true)
-        Settings.InstantFishingEnabled = false
-        return
-    end
-    
-    InstantFishingActive = true
-    
-    InstantFishingThread = task.spawn(function()
-        while Settings.InstantFishingEnabled and ScriptActive and InstantFishingActive do
-            local success, err = pcall(function()
-                -- Step 1: Cancel any existing state
-                if FishingRemotes.Cancel then
-                    pcall(function() FishingRemotes.Cancel:InvokeServer() end)
-                end
-
-                -- Step 2: Charge the rod
-                if FishingRemotes.Charge then
-                    pcall(function() FishingRemotes.Charge:InvokeServer() end)
-                end
-
-                -- Step 3: Request Minigame
-                if FishingRemotes.Request then
-                    local args = {
-                        -1.233184814453125,
-                        0.0017426679483021346,
-                        tick()
-                    }
-                    pcall(function()
-                        FishingRemotes.Request:InvokeServer(unpack(args))
-                    end)
-                end
-
-                -- Step 4: Wait for the lure to stay in water
-                task.wait(Settings.InstantFishingCompleteDelay or 0.7)
-
-                -- Step 5: Claim Reward (Optimized loop)
-                local claimAmount = Settings.InstantFishingClaimAmount or 3
-                for i = 1, claimAmount do
-                    task.spawn(function()
-                        if FishingRemotes.Claim then
-                            pcall(function()
-                                FishingRemotes.Claim:InvokeServer()
-                            end)
-                        end
-                    end)
-                end
-
-                -- Step 6: Cast Delay before next cycle
-                task.wait(Settings.InstantFishingCastDelay or 0.1)
+local function IF_Start(S,A,N)
+    if IF_T then task.cancel(IF_T) end
+    if not IF_Init() then N("Fishing Remotes Missing!",true) S.InstantFishingEnabled=false return end
+    IF_A=true
+    IF_T=task.spawn(function()
+        while S.InstantFishingEnabled and A and IF_A do
+            pcall(function()
+                if IF_R.Cancel then pcall(function() IF_R.Cancel:InvokeServer() end) end
+                if IF_R.Charge then pcall(function() IF_R.Charge:InvokeServer() end) end
+                if IF_R.Request then pcall(function() IF_R.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end) end
+                task.wait(S.InstantFishingCompleteDelay or 0.7)
+                for i=1,(S.InstantFishingClaimAmount or 3) do task.spawn(function() if IF_R.Claim then pcall(function() IF_R.Claim:InvokeServer() end) end end) end
+                task.wait(S.InstantFishingCastDelay or 0.1)
             end)
-            
-            if not success then
-                warn("Instant Fishing Error:", err)
-                task.wait(1)
-            end
         end
     end)
 end
-
-local function StopInstantFishing()
-    InstantFishingActive = false
-    if InstantFishingThread then
-        task.cancel(InstantFishingThread)
-        InstantFishingThread = nil
-    end
+local function IF_Stop() IF_A=false if IF_T then task.cancel(IF_T) IF_T=nil end end
+getfenv(2).IF_Init=IF_Init
+getfenv(2).IF_Start=IF_Start
+getfenv(2).IF_Stop=IF_Stop
+]]
+    loadstring(code)()
 end
+IF_Load()
 
 -- Instant Fishing UI Section
-local InstantFishingSection = Instance.new("Frame", Page_Fhising)
-InstantFishingSection.BackgroundTransparency = 1
-InstantFishingSection.Size = UDim2.new(1, -5, 0, 30)
-InstantFishingSection.LayoutOrder = 10
-
-local InstantFishingLabel = Instance.new("TextLabel", InstantFishingSection)
-InstantFishingLabel.BackgroundTransparency = 1
-InstantFishingLabel.Size = UDim2.new(1, 0, 0, 20)
-InstantFishingLabel.Font = Enum.Font.GothamBold
-InstantFishingLabel.Text = "⚡ Instant Fishing"
-InstantFishingLabel.TextColor3 = Theme.Accent
-InstantFishingLabel.TextSize = 12
-InstantFishingLabel.TextXAlignment = "Left"
+do
+    local lbl = Instance.new("TextLabel", Page_Fhising)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "⚡ Instant Fishing"
+    lbl.TextColor3 = Theme.Accent
+    lbl.TextSize = 12
+    lbl.TextXAlignment = "Left"
+end
 
 CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", function(state)
     Settings.InstantFishingEnabled = state
     if state then
-        -- Initialize remotes first
-        local initSuccess = InitializeFishingRemotes()
-        
-        -- Check if remotes are available
-        if not initSuccess or not FishingRemotes.Charge or not FishingRemotes.Request or not FishingRemotes.Cancel or not FishingRemotes.Claim then
+        if not IF_Init() then
             ShowNotification("Fishing Remotes Missing!", true)
             Settings.InstantFishingEnabled = false
             if ToggleRegistry["InstantFishingEnabled"] then
@@ -1061,72 +993,26 @@ CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", fu
             end
             return
         end
-        
-        StartInstantFishingCycle()
+        IF_Start()
         ShowNotification("Instant Fishing Enabled", false)
     else
-        StopInstantFishing()
+        IF_Stop()
         ShowNotification("Instant Fishing Disabled", false)
     end
 end)
 
--- Create input fields for Instant Fishing settings
-local function CreateInstantFishingInput(parent, labelText, placeholder, defaultValue, callback)
-    local Frame = Instance.new("Frame", parent)
-    Frame.BackgroundColor3 = Theme.Content
-    Frame.Size = UDim2.new(1, -5, 0, 32)
-    Frame.BorderSizePixel = 0
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
-    AddStroke(Frame, Theme.Border, 1)
-
-    local Label = Instance.new("TextLabel", Frame)
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(0, 140, 1, 0)
-    Label.Font = Enum.Font.GothamBold
-    Label.Text = labelText
-    Label.TextColor3 = Theme.TextPrimary
-    Label.TextSize = 12
-    Label.TextXAlignment = "Left"
-
-    local InputBg = Instance.new("Frame", Frame)
-    InputBg.BackgroundColor3 = Theme.Input
-    InputBg.Position = UDim2.new(0, 150, 0.5, -10)
-    InputBg.Size = UDim2.new(1, -160, 0, 20)
-    InputBg.ClipsDescendants = true
-    Instance.new("UICorner", InputBg).CornerRadius = UDim.new(0, 4)
-    AddStroke(InputBg, Theme.Border, 1)
-
-    local Input = Instance.new("TextBox", InputBg)
-    Input.BackgroundTransparency = 1
-    Input.Position = UDim2.new(0, 5, 0, 0)
-    Input.Size = UDim2.new(1, -10, 1, 0)
-    Input.Font = Enum.Font.GothamMedium
-    Input.Text = tostring(defaultValue)
-    Input.PlaceholderText = placeholder
-    Input.TextColor3 = Theme.TextPrimary
-    Input.TextSize = 11
-    Input.TextXAlignment = "Left"
-    Input.ClearTextOnFocus = false
-
-    Input.Focused:Connect(function()
-        AddStroke(InputBg, Theme.Accent, 1)
-    end)
-
-    Input.FocusLost:Connect(function()
-        AddStroke(InputBg, Theme.Border, 1)
-        callback(Input.Text, Input)
-    end)
-
-    return Input
+do
+    local lbl = Instance.new("TextLabel", Page_Fhising)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "⚙️ Fishing Settings:"
+    lbl.TextColor3 = Theme.TextSecondary
+    lbl.TextSize = 11
+    lbl.TextXAlignment = "Left"
 end
 
-local InstantFishingInputs = Instance.new("Frame", Page_Fhising)
-InstantFishingInputs.BackgroundTransparency = 1
-InstantFishingInputs.Size = UDim2.new(1, -5, 0, 110)
-InstantFishingInputs.LayoutOrder = 11
-
-local CompleteDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Complete Delay (s)", "e.g. 0.7", Settings.InstantFishingCompleteDelay, function(text)
+CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishingCompleteDelay), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingCompleteDelay = val
@@ -1134,7 +1020,7 @@ local CompleteDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Comp
     end
 end)
 
-local CastDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Cast Delay (s)", "e.g. 0.1", Settings.InstantFishingCastDelay, function(text)
+CreateInput(Page_Fhising, "Cast Delay (s)", tostring(Settings.InstantFishingCastDelay), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingCastDelay = val
@@ -1142,7 +1028,7 @@ local CastDelayInput = CreateInstantFishingInput(InstantFishingInputs, "Cast Del
     end
 end)
 
-local ClaimAmountInput = CreateInstantFishingInput(InstantFishingInputs, "Claim Amount", "e.g. 3", Settings.InstantFishingClaimAmount, function(text)
+CreateInput(Page_Fhising, "Claim Amount", tostring(Settings.InstantFishingClaimAmount), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingClaimAmount = math.floor(val)
