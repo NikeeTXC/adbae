@@ -2120,35 +2120,47 @@ task.spawn(function()
     end
 end)
 
-local IconPath = "Nikee_logo.jpeg"
-local IconUrl = "https://i.imgur.com/Z92uLfK.jpeg"
-local RealIconAsset = ""
-
-if not isfile(IconPath) then
-    local success, response = pcall(function()
-        return httpRequest({Url = IconUrl, Method = "GET"})
-    end)
-    if success and response.Body then
-        writefile(IconPath, response.Body)
-    end
-end
-
-if isfile(IconPath) and (getcustomasset or getsynasset) then
-    RealIconAsset = (getcustomasset or getsynasset)(IconPath)
-end
-
-if RealIconAsset == "" then RealIconAsset = "rbxassetid://0" end 
-
-local OpenBtn = Instance.new("ImageButton", ScreenGui) 
+-- Icon Button dengan URL langsung (lebih compatible)
+local OpenBtn = Instance.new("ImageButton", ScreenGui)
 OpenBtn.Name = "OpenBtn"
 OpenBtn.BackgroundColor3 = Theme.Background
-OpenBtn.Size = UDim2.new(0, 40, 0, 40) 
-OpenBtn.Position = UDim2.new(0, 22, 0, 75) 
-OpenBtn.Image = RealIconAsset 
+OpenBtn.Size = UDim2.new(0, 40, 0, 40)
+OpenBtn.Position = UDim2.new(0, 22, 0, 75)
+
+-- Coba load icon dari URL GitHub kamu
+local IconURL = "https://github.com/NikeeTXC/adbae/blob/main/Nikee_logo.jpeg?raw=true"
+local Success, Result = pcall(function()
+    local Http = httpRequest({Url = IconURL, Method = "GET"})
+    if Http and Http.StatusCode == 200 and Http.Body then
+        -- Coba convert ke asset
+        if getcustomasset then
+            writefile("nikee_icon.png", Http.Body)
+            return getcustomasset("nikee_icon.png")
+        elseif getsynasset then
+            writefile("nikee_icon.png", Http.Body)
+            return getsynasset("nikee_icon.png")
+        end
+    end
+    return nil
+end)
+
+-- Fallback: Gunakan Image URL langsung atau rbxassetid
+if Success and Result and Result ~= "" then
+    OpenBtn.Image = Result
+else
+    -- Coba direct URL (beberapa executor support)
+    OpenBtn.Image = IconURL
+end
+
+-- Jika tetap gagal, gunakan asset default
+if OpenBtn.Image == "" or not OpenBtn.Image then
+    OpenBtn.Image = "rbxassetid://104703460799995" -- Generic icon
+end
+
 OpenBtn.Visible = true
 OpenBtn.Active = true
 OpenBtn.Draggable = true
-OpenBtn.ScaleType = Enum.ScaleType.Fit 
+OpenBtn.ScaleType = Enum.ScaleType.Fit
 OpenBtn.SliceScale = 1
 
 Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
