@@ -1015,17 +1015,6 @@ CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", fu
     end
 end)
 
-do
-    local lbl = Instance.new("TextLabel", Page_Fhising)
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.new(1, -5, 0, 20)
-    lbl.Font = Enum.Font.GothamBold
-    lbl.Text = "⚙️ Fishing Settings:"
-    lbl.TextColor3 = Theme.TextSecondary
-    lbl.TextSize = 11
-    lbl.TextXAlignment = "Left"
-end
-
 CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishingCompleteDelay), function(text)
     local val = tonumber(text)
     if val then
@@ -1049,6 +1038,19 @@ CreateInput(Page_Fhising, "Claim Amount", tostring(Settings.InstantFishingClaimA
         ShowNotification("Claim Amount set to " .. Settings.InstantFishingClaimAmount, false)
     end
 end)
+
+-- do
+--     local lbl = Instance.new("TextLabel", Page_Fhising)
+--     lbl.BackgroundTransparency = 1
+--     lbl.Size = UDim2.new(1, -5, 0, 20)
+--     lbl.Font = Enum.Font.GothamBold
+--     lbl.Text = "⚙️ Fishing Settings:"
+--     lbl.TextColor3 = Theme.TextSecondary
+--     lbl.TextSize = 11
+--     lbl.TextXAlignment = "Left"
+-- end
+
+
 
 local AutoSellEnabled = false
 local SellMethod = "Count" 
