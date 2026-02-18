@@ -2120,7 +2120,7 @@ task.spawn(function()
     end
 end)
 
-local IconPath = "Nikee_Script.jpg"
+local IconPath = "Nikee_logo.jpeg"
 local IconUrl = "https://i.imgur.com/Z92uLfK.jpeg"
 local RealIconAsset = ""
 
