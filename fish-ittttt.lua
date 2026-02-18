@@ -2128,21 +2128,21 @@ OpenBtn.Size = UDim2.new(0, 40, 0, 40)
 OpenBtn.Position = UDim2.new(0, 22, 0, 75)
 
 -- Coba load icon dari URL GitHub kamu
-local IconURL = "https://github.com/NikeeTXC/adbae/blob/main/Nikee_logo.jpeg?raw=true"
-local Success, Result = pcall(function()
-    local Http = httpRequest({Url = IconURL, Method = "GET"})
-    if Http and Http.StatusCode == 200 and Http.Body then
-        -- Coba convert ke asset
-        if getcustomasset then
-            writefile("nikee_icon.png", Http.Body)
-            return getcustomasset("nikee_icon.png")
-        elseif getsynasset then
-            writefile("nikee_icon.png", Http.Body)
-            return getsynasset("nikee_icon.png")
-        end
-    end
-    return nil
-end)
+-- local IconURL = "https://github.com/NikeeTXC/adbae/blob/main/Nikee_logo.jpeg?raw=true"
+-- local Success, Result = pcall(function()
+--     local Http = httpRequest({Url = IconURL, Method = "GET"})
+--     if Http and Http.StatusCode == 200 and Http.Body then
+--         -- Coba convert ke asset
+--         if getcustomasset then
+--             writefile("nikee_icon.png", Http.Body)
+--             return getcustomasset("nikee_icon.png")
+--         elseif getsynasset then
+--             writefile("nikee_icon.png", Http.Body)
+--             return getsynasset("nikee_icon.png")
+--         end
+--     end
+--     return nil
+-- end)
 
 -- Fallback: Gunakan Image URL langsung atau rbxassetid
 if Success and Result and Result ~= "" then
