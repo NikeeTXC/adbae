@@ -2120,19 +2120,30 @@ task.spawn(function()
     end
 end)
 
--- Icon Button (Roblox Asset ID - Paling Compatible!)
+-- Icon Button (Logo Only - No Background)
 local OpenBtn = Instance.new("ImageButton", ScreenGui)
 OpenBtn.Name = "OpenBtn"
-OpenBtn.BackgroundTransparency = 1 -- No background box
+OpenBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+OpenBtn.BackgroundTransparency = 1
+OpenBtn.BorderSizePixel = 0
 OpenBtn.Size = UDim2.new(0, 40, 0, 40)
 OpenBtn.Position = UDim2.new(0, 22, 0, 75)
-OpenBtn.Image = "rbxassetid://82148170615791" -- Nikee Logo
+OpenBtn.Image = "rbxassetid://82148170615791"
 OpenBtn.ImageTransparency = 0
 OpenBtn.Visible = true
 OpenBtn.Active = true
 OpenBtn.Draggable = true
-OpenBtn.ScaleType = Enum.ScaleType.Fit
+OpenBtn.ScaleType = Enum.ScaleType.Slice
+OpenBtn.SliceCenter = Rect.new(0,0,0,0)
 OpenBtn.SliceScale = 1
+
+-- Hover effect (optional)
+OpenBtn.MouseEnter:Connect(function()
+    OpenBtn.ImageTransparency = 0.2
+end)
+OpenBtn.MouseLeave:Connect(function()
+    OpenBtn.ImageTransparency = 0
+end)
 
 OpenBtn.MouseButton1Click:Connect(function()
      MainFrame.Visible = not MainFrame.Visible
