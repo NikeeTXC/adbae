@@ -187,7 +187,7 @@ task.spawn(function()
                     pcall(function()
                         queueTeleport([[
                             task.wait(5)
-                            local paths = {"XAL CLOUD/FishIt/47.lua", "47.lua", "FishIt/47.lua"}
+                            local paths = {"NikeeHUB/FishIt/fishit.lua", "fishit.lua", "FishIt/fishit.lua"}
                             local scriptCode = nil
                             for _, p in ipairs(paths) do
                                 local s, c = pcall(function() return readfile(p) end)
@@ -945,20 +945,26 @@ local function IF_Init()
     end)
     return s and r
 end
-local function IF_Start(S,A,N)
+local function IF_Start(S,N)
     if IF_T then task.cancel(IF_T) end
     if not IF_Init() then N("Fishing Remotes Missing!",true) S.InstantFishingEnabled=false return end
     IF_A=true
     IF_T=task.spawn(function()
-        while S.InstantFishingEnabled and A and IF_A do
-            pcall(function()
-                if IF_R.Cancel then pcall(function() IF_R.Cancel:InvokeServer() end) end
-                if IF_R.Charge then pcall(function() IF_R.Charge:InvokeServer() end) end
-                if IF_R.Request then pcall(function() IF_R.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end) end
+        while S.InstantFishingEnabled and IF_A do
+            local ok,err=pcall(function()
+                if IF_R.Cancel then IF_R.Cancel:InvokeServer() end
+                task.wait(0.05)
+                if IF_R.Charge then IF_R.Charge:InvokeServer() end
+                task.wait(0.05)
+                if IF_R.Request then IF_R.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end
                 task.wait(S.InstantFishingCompleteDelay or 0.7)
-                for i=1,(S.InstantFishingClaimAmount or 3) do task.spawn(function() if IF_R.Claim then pcall(function() IF_R.Claim:InvokeServer() end) end end) end
+                local claimAmt=S.InstantFishingClaimAmount or 3
+                for i=1,claimAmt do
+                    if IF_R.Claim then IF_R.Claim:InvokeServer() end
+                end
                 task.wait(S.InstantFishingCastDelay or 0.1)
             end)
+            if not ok then warn("IF Error:",err) task.wait(1) end
         end
     end)
 end
@@ -994,7 +1000,7 @@ CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", fu
             end
             return
         end
-        IF_Start()
+        IF_Start(Settings, ShowNotification)
         ShowNotification("Instant Fishing Enabled", false)
     else
         IF_Stop()
@@ -2186,7 +2192,7 @@ SendStatsBtn.TextColor3 = Color3.new(1, 1, 1)
 SendStatsBtn.TextSize = 11
 Instance.new("UICorner", SendStatsBtn).CornerRadius = UDim.new(0, 6)
 
-local ServerTitle = "NikeeHUB"
+local ServerTitle = "XALSCENT"
 CreateInput(Page_SessionStats, "Server Title", ServerTitle, function(v) ServerTitle = v end)
 CreateStatItem(Page_SessionStats, "Secret Fish Caught", "Secret")
 CreateStatItem(Page_SessionStats, "Ruby Gemstones", "Ruby")
