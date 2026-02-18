@@ -922,60 +922,58 @@ CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     end
 end)
 
--- Instant Fishing - Load from external to save local vars
-local function IF_Load()
-    local code = [[
-local IF_R={Charge=nil,Request=nil,Cancel=nil,Claim=nil}
-local IF_I=false
-local IF_A=false
-local IF_T=nil
+-- Instant Fishing
+local IF={Remotes={Charge=nil,Request=nil,Cancel=nil,Claim=nil},Initialized=false,Active=false,Thread=nil}
+
 local function IF_Init()
-    if IF_I then return true end
+    if IF.Initialized then return true end
     local s,r=pcall(function()
-        local np=game:GetService("ReplicatedStorage"):WaitForChild("Packages",5):WaitForChild("_Index",5):WaitForChild("sleitnick_net@0.2.0",5):WaitForChild("net",5)
+        local np=ReplicatedStorage:WaitForChild("Packages",5):WaitForChild("_Index",5):WaitForChild("sleitnick_net@0.2.0",5):WaitForChild("net",5)
         if np then
-            IF_R.Charge=np:WaitForChild("RF/ChargeFishingRod",3)
-            IF_R.Request=np:WaitForChild("RF/RequestFishingMinigameStarted",3)
-            IF_R.Cancel=np:WaitForChild("RF/CancelFishingInputs",3)
-            IF_R.Claim=np:WaitForChild("RF/CatchFishCompleted",3)
-            IF_I=IF_R.Charge and IF_R.Request and IF_R.Cancel and IF_R.Claim
-            return IF_I
+            IF.Remotes.Charge=np:WaitForChild("RF/ChargeFishingRod",3)
+            IF.Remotes.Request=np:WaitForChild("RF/RequestFishingMinigameStarted",3)
+            IF.Remotes.Cancel=np:WaitForChild("RF/CancelFishingInputs",3)
+            IF.Remotes.Claim=np:WaitForChild("RF/CatchFishCompleted",3)
+            IF.Initialized=IF.Remotes.Charge and IF.Remotes.Request and IF.Remotes.Cancel and IF.Remotes.Claim
+            return IF.Initialized
         end
         return false
     end)
     return s and r
 end
-local function IF_Start(S,N)
-    if IF_T then task.cancel(IF_T) end
-    if not IF_Init() then N("Fishing Remotes Missing!",true) S.InstantFishingEnabled=false return end
-    IF_A=true
-    IF_T=task.spawn(function()
-        while S.InstantFishingEnabled and IF_A do
-            local ok,err=pcall(function()
-                if IF_R.Cancel then IF_R.Cancel:InvokeServer() end
+
+local function IF_Start()
+    if IF.Thread then task.cancel(IF.Thread) IF.Thread=nil end
+    if not IF_Init() then
+        ShowNotification("Fishing Remotes Missing!",true)
+        Settings.InstantFishingEnabled=false
+        return
+    end
+    IF.Active=true
+    IF.Thread=task.spawn(function()
+        while IF.Active and Settings.InstantFishingEnabled and ScriptActive do
+            pcall(function()
+                if IF.Remotes.Cancel then IF.Remotes.Cancel:InvokeServer() end
                 task.wait(0.05)
-                if IF_R.Charge then IF_R.Charge:InvokeServer() end
+                if IF.Remotes.Charge then IF.Remotes.Charge:InvokeServer() end
                 task.wait(0.05)
-                if IF_R.Request then IF_R.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end
-                task.wait(S.InstantFishingCompleteDelay or 0.7)
-                local claimAmt=S.InstantFishingClaimAmount or 3
-                for i=1,claimAmt do
-                    if IF_R.Claim then IF_R.Claim:InvokeServer() end
+                if IF.Remotes.Request then IF.Remotes.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end
+                task.wait(Settings.InstantFishingCompleteDelay or 0.7)
+                for i=1,(Settings.InstantFishingClaimAmount or 3) do
+                    if IF.Remotes.Claim then IF.Remotes.Claim:InvokeServer() end
+                    task.wait(0.02)
                 end
-                task.wait(S.InstantFishingCastDelay or 0.1)
+                task.wait(Settings.InstantFishingCastDelay or 0.1)
             end)
-            if not ok then warn("IF Error:",err) task.wait(1) end
         end
+        IF.Thread=nil
     end)
 end
-local function IF_Stop() IF_A=false if IF_T then task.cancel(IF_T) IF_T=nil end end
-getfenv(2).IF_Init=IF_Init
-getfenv(2).IF_Start=IF_Start
-getfenv(2).IF_Stop=IF_Stop
-]]
-    loadstring(code)()
+
+local function IF_Stop()
+    IF.Active=false
+    if IF.Thread then task.cancel(IF.Thread) IF.Thread=nil end
 end
-IF_Load()
 
 -- Instant Fishing UI Section
 do
@@ -992,15 +990,7 @@ end
 CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", function(state)
     Settings.InstantFishingEnabled = state
     if state then
-        if not IF_Init() then
-            ShowNotification("Fishing Remotes Missing!", true)
-            Settings.InstantFishingEnabled = false
-            if ToggleRegistry["InstantFishingEnabled"] then
-                ToggleRegistry["InstantFishingEnabled"](false)
-            end
-            return
-        end
-        IF_Start(Settings, ShowNotification)
+        IF_Start()
         ShowNotification("Instant Fishing Enabled", false)
     else
         IF_Stop()
@@ -2192,7 +2182,7 @@ SendStatsBtn.TextColor3 = Color3.new(1, 1, 1)
 SendStatsBtn.TextSize = 11
 Instance.new("UICorner", SendStatsBtn).CornerRadius = UDim.new(0, 6)
 
-local ServerTitle = "XALSCENT"
+local ServerTitle = "NikeeHUB"
 CreateInput(Page_SessionStats, "Server Title", ServerTitle, function(v) ServerTitle = v end)
 CreateStatItem(Page_SessionStats, "Secret Fish Caught", "Secret")
 CreateStatItem(Page_SessionStats, "Ruby Gemstones", "Ruby")
