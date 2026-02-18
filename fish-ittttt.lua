@@ -922,8 +922,8 @@ CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     end
 end)
 
--- Instant Fishing (Optimized for Speed)
-local IF={Remotes={Charge=nil,Request=nil,Cancel=nil,Claim=nil},Initialized=false,Active=false,Thread=nil}
+-- Instant Fishing (NikeeHUB.lua Pattern - No Delay)
+local IF={Remotes={Charge=nil,Request=nil,Cancel=nil,Claim=nil},Initialized=false,Enabled=false}
 
 local function IF_Init()
     if IF.Initialized then return true end
@@ -942,47 +942,50 @@ local function IF_Init()
     return s and r
 end
 
-local function IF_Start()
-    if IF.Thread then task.cancel(IF.Thread) IF.Thread=nil end
+local function IF_FishingLoop()
+    while IF.Enabled and ScriptActive do
+        -- Cancel
+        pcall(function() IF.Remotes.Cancel:InvokeServer() end)
+        -- Charge
+        pcall(function() IF.Remotes.Charge:InvokeServer() end)
+        -- Request
+        pcall(function() IF.Remotes.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end)
+        -- Wait
+        task.wait(Settings.InstantFishingCompleteDelay or 0.7)
+        -- Claim Parallel
+        for i=1,(Settings.InstantFishingClaimAmount or 3) do
+            task.spawn(function() pcall(function() IF.Remotes.Claim:InvokeServer() end) end)
+        end
+        -- Cast Delay
+        task.wait(Settings.InstantFishingCastDelay or 0.1)
+    end
+end
+
+function IF_Start()
     if not IF_Init() then
         ShowNotification("Fishing Remotes Missing!",true)
         Settings.InstantFishingEnabled=false
         return
     end
-    IF.Active=true
-    IF.Thread=task.spawn(function()
-        while IF.Active and Settings.InstantFishingEnabled and ScriptActive do
-            -- Cancel existing
-            pcall(function() IF.Remotes.Cancel:InvokeServer() end)
-            
-            -- Charge rod
-            pcall(function() IF.Remotes.Charge:InvokeServer() end)
-            
-            -- Request minigame
-            pcall(function() IF.Remotes.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end)
-            
-            -- Wait for bite
-            task.wait(Settings.InstantFishingCompleteDelay or 0.7)
-            
-            -- Claim PARALLEL (seperti NikeeHUB.lua)
-            local claimAmt=Settings.InstantFishingClaimAmount or 3
-            for i=1,claimAmt do
-                task.spawn(function()
-                    pcall(function() IF.Remotes.Claim:InvokeServer() end)
-                end)
-            end
-            
-            -- Cast delay
-            task.wait(Settings.InstantFishingCastDelay or 0.1)
-        end
-        IF.Thread=nil
-    end)
+    IF.Enabled=true
+    -- Start fishing loop
+    task.spawn(IF_FishingLoop)
 end
 
-local function IF_Stop()
-    IF.Active=false
-    if IF.Thread then task.cancel(IF.Thread) IF.Thread=nil end
+function IF_Stop()
+    IF.Enabled=false
 end
+
+-- Monitor Toggle (NikeeHUB Pattern)
+task.spawn(function()
+    while ScriptActive do
+        if Settings.InstantFishingEnabled and not IF.Enabled then
+            IF_Start()
+            repeat task.wait(0.1) until not Settings.InstantFishingEnabled or not ScriptActive
+        end
+        task.wait(0.1)
+    end
+end)
 
 -- Instant Fishing UI Section
 do
@@ -997,12 +1000,17 @@ do
 end
 
 CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", function(state)
-    Settings.InstantFishingEnabled = state
     if state then
-        IF_Start()
+        if not IF_Init() then
+            ShowNotification("Fishing Remotes Missing!",true)
+            Settings.InstantFishingEnabled=false
+            return
+        end
+        IF.Enabled=true
+        task.spawn(IF_FishingLoop)
         ShowNotification("Instant Fishing Enabled", false)
     else
-        IF_Stop()
+        IF.Enabled=false
         ShowNotification("Instant Fishing Disabled", false)
     end
 end)
