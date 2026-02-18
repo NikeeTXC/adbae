@@ -1728,19 +1728,15 @@ local function TestWebhook(url, name)
         local success, response = pcall(function()
             return httpRequest({ Url = url, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
         end)
-        
+
         if success and response then
             local status = response.StatusCode or "Unknown"
-            local body = response.Body or "No Body"
-            
             if status and (status < 200 or status >= 300) then
-                ShowAlert("Webhook Failed: " .. status, "Response Body:\n" .. string.sub(tostring(body), 1, 500))
                 ShowNotification("Failed: " .. status, true)
             else
                 ShowNotification("Success: " .. status, false)
             end
         else
-            ShowAlert("Request Error", "Error: " .. tostring(response))
             ShowNotification("Request Error!", true)
         end
     end)
