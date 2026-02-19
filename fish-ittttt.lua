@@ -978,8 +978,6 @@ task.spawn(function()
     local equipCooldown = 1 -- Delay 1 detik
     
     while ScriptActive do
-        task.wait(0.15)
-        
         if Settings.AutoEquipRodEnabled then
             local currentChar = Players.LocalPlayer.Character
             if currentChar then
@@ -1012,6 +1010,7 @@ task.spawn(function()
                 end
             end
         end
+        task.wait(0.05) -- Check lebih cepat, tapi equip tetap ada cooldown 1 detik
     end
 end)
 
