@@ -1642,7 +1642,7 @@ AutoLoadWrapper.LayoutOrder = 5
 
 local AutoLoadBtn = Instance.new("TextButton", AutoLoadWrapper)
 AutoLoadBtn.BackgroundColor3 = Theme.Input
-AutoLoadBtn.Size = UDim2.new(1, 0, 1, 0)
+AutoLoadBtn.Size = UDim2.new(0.48, 0, 1, 0)
 AutoLoadBtn.Font = Enum.Font.GothamBold
 AutoLoadBtn.Text = "SET AS AUTOLOAD"
 AutoLoadBtn.TextColor3 = Theme.TextSecondary
@@ -1650,32 +1650,54 @@ AutoLoadBtn.TextSize = 11
 Instance.new("UICorner", AutoLoadBtn).CornerRadius = UDim.new(0, 6)
 AddStroke(AutoLoadBtn, Theme.Border, 1)
 
+local ClearAutoLoadBtn = Instance.new("TextButton", AutoLoadWrapper)
+ClearAutoLoadBtn.BackgroundColor3 = Theme.Error
+ClearAutoLoadBtn.Position = UDim2.new(0.52, 0, 0, 0)
+ClearAutoLoadBtn.Size = UDim2.new(0.48, 0, 1, 0)
+ClearAutoLoadBtn.Font = Enum.Font.GothamBold
+ClearAutoLoadBtn.Text = "CLEAR AUTOLOAD"
+ClearAutoLoadBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearAutoLoadBtn.TextSize = 11
+Instance.new("UICorner", ClearAutoLoadBtn).CornerRadius = UDim.new(0, 6)
+AddStroke(ClearAutoLoadBtn, Theme.Border, 1)
+
 local function UpdateAutoLoadBtnState()
     local pref = GetAutoLoadPref()
-    if pref and pref.enabled and pref.config == selectedConfig then
+    if pref and pref.enabled and pref.config then
         AutoLoadBtn.BackgroundColor3 = Theme.Success
         AutoLoadBtn.TextColor3 = Color3.new(1,1,1)
-        AutoLoadBtn.Text = "AUTOLOAD ACTIVE"
+        AutoLoadBtn.Text = "AUTOLOAD: " .. pref.config
+        ClearAutoLoadBtn.BackgroundColor3 = Theme.Error
+        ClearAutoLoadBtn.TextColor3 = Color3.new(1,1,1)
+        ClearAutoLoadBtn.Text = "CLEAR AUTOLOAD"
     else
         AutoLoadBtn.BackgroundColor3 = Theme.Input
         AutoLoadBtn.TextColor3 = Theme.TextSecondary
         AutoLoadBtn.Text = "SET AS AUTOLOAD"
+        ClearAutoLoadBtn.BackgroundColor3 = Theme.Input
+        ClearAutoLoadBtn.TextColor3 = Theme.TextSecondary
+        ClearAutoLoadBtn.Text = "NO AUTOLOAD"
     end
 end
 
 AutoLoadBtn.MouseButton1Click:Connect(function()
     if not selectedConfig then ShowNotification("Select a config first!", true) return end
-    
+
+    SaveAutoLoadPref(selectedConfig, true)
+    ShowNotification("Autoload Set: " .. selectedConfig, false)
+    UpdateAutoLoadBtnState()
+end)
+
+ClearAutoLoadBtn.MouseButton1Click:Connect(function()
     local pref = GetAutoLoadPref()
-    local isCurrentlyEnabled = (pref and pref.enabled and pref.config == selectedConfig)
-    
-    if isCurrentlyEnabled then
-        SaveAutoLoadPref(selectedConfig, false)
-        ShowNotification("Autoload Disabled", false)
-    else
-        SaveAutoLoadPref(selectedConfig, true)
-        ShowNotification("Autoload Set: " .. selectedConfig, false)
+    if not pref or not pref.enabled then 
+        ShowNotification("No Autoload Active!", true) 
+        return 
     end
+    
+    writefile(AutoLoadConfigPath, HttpService:JSONEncode({ config = "", enabled = false }))
+    currentAutoLoad = nil
+    ShowNotification("Autoload Cleared!", false)
     UpdateAutoLoadBtnState()
 end)
 
