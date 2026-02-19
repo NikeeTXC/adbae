@@ -2503,7 +2503,7 @@ local function SendWebhook(data, category)
     if category == "SECRET" then
         SessionStats.Secret = SessionStats.Secret + 1
         embedTitle = "🎣 New Fish Caught!"
-        embedColor = 1700255
+        embedColor = 12337389
         contentMsg = "@everyone"
 
         local fishName = data.Item or "Unknown"
