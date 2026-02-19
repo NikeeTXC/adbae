@@ -972,6 +972,7 @@ end)
 -- Auto Equip Rod Logic
 local AutoEquipRodEnabled = false
 local RE_EquipTool = nil
+local LastEquippedSlot = 1
 
 local function AutoEquipRod_Init()
     if RE_EquipTool then return true end
@@ -987,34 +988,67 @@ local function AutoEquipRod_Init()
 end
 
 local function AutoEquipRod_Equip()
-    if not AutoEquipRodEnabled then return end
     if not AutoEquipRod_Init() then
-        ShowNotification("Equip Remote Missing!", true)
-        return
+        return false
     end
     
-    pcall(function()
-        RE_EquipTool:FireServer(1)
+    local success = pcall(function()
+        RE_EquipTool:FireServer(LastEquippedSlot)
     end)
+    return success
 end
 
--- Monitor Auto Equip Rod
+local function GetCurrentTool()
+    local char = Players.LocalPlayer.Character
+    if char then
+        return char:FindFirstChildOfClass("Tool")
+    end
+    return nil
+end
+
+-- Continuous Auto Equip Rod Monitor
 task.spawn(function()
+    local lastCheckTime = 0
+    local equipCooldown = 0.3 -- Cooldown untuk prevent spam equip
+    local lastEquippedName = ""
+    
     while ScriptActive do
-        if Settings.AutoEquipRodEnabled and not AutoEquipRodEnabled then
-            AutoEquipRodEnabled = true
-            if AutoEquipRod_Init() then
-                AutoEquipRod_Equip()
-                ShowNotification("Auto Equip Rod Enabled", false)
+        if Settings.AutoEquipRodEnabled then
+            if not AutoEquipRodEnabled then
+                AutoEquipRodEnabled = true
+                if AutoEquipRod_Init() then
+                    AutoEquipRod_Equip()
+                    ShowNotification("Auto Equip Rod Enabled", false)
+                else
+                    Settings.AutoEquipRodEnabled = false
+                    AutoEquipRodEnabled = false
+                end
             else
-                Settings.AutoEquipRodEnabled = false
-                AutoEquipRodEnabled = false
+                -- Continuous monitoring - re-equip rod jika memegang ikan
+                local currentTool = GetCurrentTool()
+                if currentTool then
+                    local toolName = currentTool.Name:lower()
+                    -- Cek jika memegang ikan atau bukan rod
+                    if toolName:find("fish") or (not toolName:find("rod") and not toolName:find("fishing")) then
+                        local now = tick()
+                        if now - lastCheckTime > equipCooldown then
+                            local success = AutoEquipRod_Equip()
+                            if success and currentTool.Name ~= lastEquippedName then
+                                ShowNotification("Equipped: Rod", false)
+                                lastEquippedName = "Rod"
+                            end
+                            lastCheckTime = now
+                        end
+                    else
+                        lastEquippedName = currentTool.Name
+                    end
+                end
             end
-        elseif not Settings.AutoEquipRodEnabled and AutoEquipRodEnabled then
+        elseif AutoEquipRodEnabled then
             AutoEquipRodEnabled = false
             ShowNotification("Auto Equip Rod Disabled", false)
         end
-        task.wait(0.5)
+        task.wait(0.2)
     end
 end)
 
@@ -1039,7 +1073,10 @@ CreateToggle(Page_Fhising, "Enable Auto Equip Rod", "AutoEquipRodEnabled", funct
             return
         end
         AutoEquipRodEnabled = true
-        AutoEquipRod_Equip()
+        local success = AutoEquipRod_Equip()
+        if success then
+            ShowNotification("Auto Equip Rod Active!", false)
+        end
     else
         AutoEquipRodEnabled = false
     end
