@@ -534,13 +534,13 @@ local function CreatePage(name)
     Page.ScrollBarImageColor3 = Theme.Accent
     Page.Visible = false
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
-    Page.AutomaticCanvasSize = "Y"
+    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Page.ZIndex = 4
-    
+
     local layout = Instance.new("UIListLayout", Page)
-    layout.Padding = UDim.new(0, 6) 
-    layout.SortOrder = Enum.SortOrder.LayoutOrder 
-    
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
     return Page
 end
 
