@@ -1650,18 +1650,6 @@ DeleteBtn.MouseButton1Click:Connect(function()
     RefreshConfigList()
 end)
 
-local AutoLoadWrapper = Instance.new("Frame", Page_Save)
-AutoLoadWrapper.BackgroundTransparency = 1; AutoLoadWrapper.Size = UDim2.new(1, -5, 0, 30)
-AutoLoadWrapper.LayoutOrder = 5
-
-local AutoLoadLabel = Instance.new("TextLabel", AutoLoadWrapper)
-AutoLoadLabel.BackgroundTransparency = 1
-AutoLoadLabel.Size = UDim2.new(1, 0, 1, 0)
-AutoLoadLabel.Font = Enum.Font.GothamBold
-AutoLoadLabel.Text = "AutoLoad Removed"
-AutoLoadLabel.TextColor3 = Theme.TextSecondary
-AutoLoadLabel.TextSize = 11
-
 local originalRefresh = RefreshConfigList
 RefreshConfigList = function()
     for _, v in pairs(ConfigList:GetChildren()) do
@@ -1675,27 +1663,24 @@ RefreshConfigList = function()
 
     for _, file in pairs(files) do
         local name = file:match("([^/\\]+)$") or file
+        name = name:gsub("%.json$", "")
 
-        if name ~= "autoload.json" then
-            name = name:gsub("%.json$", "")
+        local Btn = Instance.new("TextButton", ConfigList)
+        Btn.BackgroundColor3 = Theme.Background
+        Btn.Size = UDim2.new(1, -8, 0, 24); Btn.Font = Enum.Font.GothamMedium
+        Btn.Text = "  " .. name; Btn.TextColor3 = Theme.TextSecondary
+        Btn.TextSize = 11; Btn.TextXAlignment = "Left"
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
 
-            local Btn = Instance.new("TextButton", ConfigList)
-            Btn.BackgroundColor3 = Theme.Background
-            Btn.Size = UDim2.new(1, -8, 0, 24); Btn.Font = Enum.Font.GothamMedium
-            Btn.Text = "  " .. name; Btn.TextColor3 = Theme.TextSecondary
-            Btn.TextSize = 11; Btn.TextXAlignment = "Left"
-            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
-
-            Btn.MouseButton1Click:Connect(function()
-                for _, b in pairs(ConfigList:GetChildren()) do
-                    if b:IsA("TextButton") then b.BackgroundColor3 = Theme.Background; b.TextColor3 = Theme.TextSecondary end
-                end
-                Btn.BackgroundColor3 = Theme.Accent
-                Btn.TextColor3 = Color3.new(1, 1, 1)
-                selectedConfig = name
-                LoadBtn.BackgroundColor3 = Theme.Success
-            end)
-        end
+        Btn.MouseButton1Click:Connect(function()
+            for _, b in pairs(ConfigList:GetChildren()) do
+                if b:IsA("TextButton") then b.BackgroundColor3 = Theme.Background; b.TextColor3 = Theme.TextSecondary end
+            end
+            Btn.BackgroundColor3 = Theme.Accent
+            Btn.TextColor3 = Color3.new(1, 1, 1)
+            selectedConfig = name
+            LoadBtn.BackgroundColor3 = Theme.Success
+        end)
     end
 end
 
