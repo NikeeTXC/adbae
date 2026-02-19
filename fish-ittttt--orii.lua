@@ -133,15 +133,16 @@ local FishingAreas = {
     ["Underground Cellar"] = {Pos = Vector3.new(2118.417, -91.448, -733.800), Look = Vector3.new(0.854, 0.000, 0.521)},
     ["Volcano"] = {Pos = Vector3.new(-552.797, 21.174, 186.940), Look = Vector3.new(-0.251, -0.534, -0.808)},
     ["Volcanic Cavern"] = {Pos = Vector3.new(1249.005, 82.830, -10224.920), Look = Vector3.new(-0.649, -0.666, 0.368)},
+    ["Heartfelt Island"] = {Pos = Vector3.new(1114.075, 4.846, 2712.839), Look = Vector3.new(0.995, 0.000, -0.103)},
 }
 
-local Settings = { 
-    SecretEnabled = false, 
-    RubyEnabled = false, 
+local Settings = {
+    SecretEnabled = false,
+    RubyEnabled = false,
 
     MutationCrystalized = false,
     CaveCrystalEnabled = false,
-    LeaveEnabled = false, 
+    LeaveEnabled = false,
     PlayerNonPSAuto = false,
     ForeignDetection = false,
     SpoilerName = true,
@@ -150,7 +151,13 @@ local Settings = {
     NoAnimation = false,
     RemoveVFX = false,
     DisablePopups = false,
-    EvolvedEnabled = false
+    EvolvedEnabled = false,
+    
+    -- Instant Fishing Settings
+    InstantFishingEnabled = false,
+    InstantFishingCompleteDelay = 0.7,
+    InstantFishingCastDelay = 0.1,
+    InstantFishingClaimAmount = 3
 }
 
 task.spawn(function()
@@ -180,7 +187,7 @@ task.spawn(function()
                     pcall(function()
                         queueTeleport([[
                             task.wait(5)
-                            local paths = {"NikeeHUB/FishIt/Fishit.lua", "Fishit.lua", "FishIt/Fishit.lua"}
+                            local paths = {"NikeeHUB/FishIt/fishit.lua", "fishit.lua", "FishIt/fishit.lua"}
                             local scriptCode = nil
                             for _, p in ipairs(paths) do
                                 local s, c = pcall(function() return readfile(p) end)
@@ -915,6 +922,136 @@ CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
     end
 end)
 
+-- Instant Fishing (NikeeHUB.lua Pattern - No Delay)
+local IF={Remotes={Charge=nil,Request=nil,Cancel=nil,Claim=nil},Initialized=false,Enabled=false}
+
+local function IF_Init()
+    if IF.Initialized then return true end
+    local s,r=pcall(function()
+        local np=ReplicatedStorage:WaitForChild("Packages",5):WaitForChild("_Index",5):WaitForChild("sleitnick_net@0.2.0",5):WaitForChild("net",5)
+        if np then
+            IF.Remotes.Charge=np:WaitForChild("RF/ChargeFishingRod",3)
+            IF.Remotes.Request=np:WaitForChild("RF/RequestFishingMinigameStarted",3)
+            IF.Remotes.Cancel=np:WaitForChild("RF/CancelFishingInputs",3)
+            IF.Remotes.Claim=np:WaitForChild("RF/CatchFishCompleted",3)
+            IF.Initialized=IF.Remotes.Charge and IF.Remotes.Request and IF.Remotes.Cancel and IF.Remotes.Claim
+            return IF.Initialized
+        end
+        return false
+    end)
+    return s and r
+end
+
+local function IF_FishingLoop()
+    while IF.Enabled and ScriptActive do
+        -- Cancel
+        pcall(function() IF.Remotes.Cancel:InvokeServer() end)
+        -- Charge
+        pcall(function() IF.Remotes.Charge:InvokeServer() end)
+        -- Request
+        pcall(function() IF.Remotes.Request:InvokeServer(-1.233184814453125,0.0017426679483021346,tick()) end)
+        -- Wait
+        task.wait(Settings.InstantFishingCompleteDelay or 0.7)
+        -- Claim Parallel
+        for i=1,(Settings.InstantFishingClaimAmount or 3) do
+            task.spawn(function() pcall(function() IF.Remotes.Claim:InvokeServer() end) end)
+        end
+        -- Cast Delay
+        task.wait(Settings.InstantFishingCastDelay or 0.1)
+    end
+end
+
+function IF_Start()
+    if not IF_Init() then
+        ShowNotification("Fishing Remotes Missing!",true)
+        Settings.InstantFishingEnabled=false
+        return
+    end
+    IF.Enabled=true
+    -- Start fishing loop
+    task.spawn(IF_FishingLoop)
+end
+
+function IF_Stop()
+    IF.Enabled=false
+end
+
+-- Monitor Toggle (NikeeHUB Pattern)
+task.spawn(function()
+    while ScriptActive do
+        if Settings.InstantFishingEnabled and not IF.Enabled then
+            IF_Start()
+            repeat task.wait(0.1) until not Settings.InstantFishingEnabled or not ScriptActive
+        end
+        task.wait(0.1)
+    end
+end)
+
+-- Instant Fishing UI Section
+do
+    local lbl = Instance.new("TextLabel", Page_Fhising)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "⚡ Instant Fishing"
+    lbl.TextColor3 = Theme.Accent
+    lbl.TextSize = 12
+    lbl.TextXAlignment = "Left"
+end
+
+CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", function(state)
+    if state then
+        if not IF_Init() then
+            ShowNotification("Fishing Remotes Missing!",true)
+            Settings.InstantFishingEnabled=false
+            return
+        end
+        IF.Enabled=true
+        task.spawn(IF_FishingLoop)
+        ShowNotification("Instant Fishing Enabled", false)
+    else
+        IF.Enabled=false
+        ShowNotification("Instant Fishing Disabled", false)
+    end
+end)
+
+CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishingCompleteDelay), function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingCompleteDelay = val
+        ShowNotification("Complete Delay set to " .. val, false)
+    end
+end)
+
+CreateInput(Page_Fhising, "Cast Delay (s)", tostring(Settings.InstantFishingCastDelay), function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingCastDelay = val
+        ShowNotification("Cast Delay set to " .. val, false)
+    end
+end)
+
+CreateInput(Page_Fhising, "Claim Amount", tostring(Settings.InstantFishingClaimAmount), function(text)
+    local val = tonumber(text)
+    if val then
+        Settings.InstantFishingClaimAmount = math.floor(val)
+        ShowNotification("Claim Amount set to " .. Settings.InstantFishingClaimAmount, false)
+    end
+end)
+
+-- do
+--     local lbl = Instance.new("TextLabel", Page_Fhising)
+--     lbl.BackgroundTransparency = 1
+--     lbl.Size = UDim2.new(1, -5, 0, 20)
+--     lbl.Font = Enum.Font.GothamBold
+--     lbl.Text = "⚙️ Fishing Settings:"
+--     lbl.TextColor3 = Theme.TextSecondary
+--     lbl.TextSize = 11
+--     lbl.TextXAlignment = "Left"
+-- end
+
+
+
 local AutoSellEnabled = false
 local SellMethod = "Count" 
 local SellValue = 600 
@@ -1340,12 +1477,13 @@ end
 SaveBtn.MouseButton1Click:Connect(function()
     local name = SaveInput.Text
     if name == "" then ShowNotification("Name cannot be empty!", true) return end
-    
+
     local validKeys = {
-        "SecretEnabled", "RubyEnabled", "MutationCrystalized", "CaveCrystalEnabled", 
-        "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName", 
-        "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups", 
-        "EvolvedEnabled"
+        "SecretEnabled", "RubyEnabled", "MutationCrystalized", "CaveCrystalEnabled",
+        "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName",
+        "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups",
+        "EvolvedEnabled", "InstantFishingEnabled", "InstantFishingCompleteDelay",
+        "InstantFishingCastDelay", "InstantFishingClaimAmount"
     }
     
     local cleanSettings = {}
@@ -1590,19 +1728,15 @@ local function TestWebhook(url, name)
         local success, response = pcall(function()
             return httpRequest({ Url = url, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = HttpService:JSONEncode(p) })
         end)
-        
+
         if success and response then
             local status = response.StatusCode or "Unknown"
-            local body = response.Body or "No Body"
-            
             if status and (status < 200 or status >= 300) then
-                ShowAlert("Webhook Failed: " .. status, "Response Body:\n" .. string.sub(tostring(body), 1, 500))
                 ShowNotification("Failed: " .. status, true)
             else
                 ShowNotification("Success: " .. status, false)
             end
         else
-            ShowAlert("Request Error", "Error: " .. tostring(response))
             ShowNotification("Request Error!", true)
         end
     end)
@@ -1984,39 +2118,30 @@ task.spawn(function()
     end
 end)
 
-local IconPath = "Nikee_Script.jpg"
-local IconUrl = "https://i.imgur.com/Z92uLfK.jpeg"
-local RealIconAsset = ""
-
-if not isfile(IconPath) then
-    local success, response = pcall(function()
-        return httpRequest({Url = IconUrl, Method = "GET"})
-    end)
-    if success and response.Body then
-        writefile(IconPath, response.Body)
-    end
-end
-
-if isfile(IconPath) and (getcustomasset or getsynasset) then
-    RealIconAsset = (getcustomasset or getsynasset)(IconPath)
-end
-
-if RealIconAsset == "" then RealIconAsset = "rbxassetid://0" end 
-
-local OpenBtn = Instance.new("ImageButton", ScreenGui) 
+-- Icon Button (Logo Only - No Background)
+local OpenBtn = Instance.new("ImageButton", ScreenGui)
 OpenBtn.Name = "OpenBtn"
-OpenBtn.BackgroundColor3 = Theme.Background
-OpenBtn.Size = UDim2.new(0, 40, 0, 40) 
-OpenBtn.Position = UDim2.new(0, 22, 0, 75) 
-OpenBtn.Image = RealIconAsset 
+OpenBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+OpenBtn.BackgroundTransparency = 1
+OpenBtn.BorderSizePixel = 0
+OpenBtn.Size = UDim2.new(0, 40, 0, 40)
+OpenBtn.Position = UDim2.new(0, 22, 0, 75)
+OpenBtn.Image = "rbxassetid://82148170615791"
+OpenBtn.ImageTransparency = 0
 OpenBtn.Visible = true
 OpenBtn.Active = true
 OpenBtn.Draggable = true
-OpenBtn.ScaleType = Enum.ScaleType.Fit 
+OpenBtn.ScaleType = Enum.ScaleType.Slice
+OpenBtn.SliceCenter = Rect.new(0,0,0,0)
 OpenBtn.SliceScale = 1
 
-Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
-AddStroke(OpenBtn, Theme.Border, 1)
+-- Hover effect (optional)
+OpenBtn.MouseEnter:Connect(function()
+    OpenBtn.ImageTransparency = 0.2
+end)
+OpenBtn.MouseLeave:Connect(function()
+    OpenBtn.ImageTransparency = 0
+end)
 
 OpenBtn.MouseButton1Click:Connect(function()
      MainFrame.Visible = not MainFrame.Visible
@@ -2063,7 +2188,7 @@ SendStatsBtn.TextColor3 = Color3.new(1, 1, 1)
 SendStatsBtn.TextSize = 11
 Instance.new("UICorner", SendStatsBtn).CornerRadius = UDim.new(0, 6)
 
-local ServerTitle = "XALSCENT"
+local ServerTitle = "NikeeHUB"
 CreateInput(Page_SessionStats, "Server Title", ServerTitle, function(v) ServerTitle = v end)
 CreateStatItem(Page_SessionStats, "Secret Fish Caught", "Secret")
 CreateStatItem(Page_SessionStats, "Ruby Gemstones", "Ruby")
@@ -2497,7 +2622,7 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
-print("NikeeHUB Beta Loaded")
+print("✅ NikeeHUB System Session v1.0 Loaded!")
 
 task.delay(1, function()
     local autoPref = GetAutoLoadPref()

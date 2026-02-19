@@ -152,12 +152,15 @@ local Settings = {
     RemoveVFX = false,
     DisablePopups = false,
     EvolvedEnabled = false,
-    
+
     -- Instant Fishing Settings
     InstantFishingEnabled = false,
     InstantFishingCompleteDelay = 0.7,
     InstantFishingCastDelay = 0.1,
-    InstantFishingClaimAmount = 3
+    InstantFishingClaimAmount = 3,
+
+    -- Auto Sell Settings
+    AutoSellThreshold = 600
 }
 
 task.spawn(function()
@@ -1053,37 +1056,37 @@ end)
 
 
 local AutoSellEnabled = false
-local SellMethod = "Count" 
-local SellValue = 600 
 
-CreateToggle(Page_Fhising, "Auto Sell (10m / 600 Items)", false, function(state)
+CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
     AutoSellEnabled = state
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
         if not RF_Sell then ShowNotification("Remote Sell Missing!", true) AutoSellEnabled = false return end
-        
-        task.spawn(function()
-            local LastSellTime = tick()
-            while AutoSellEnabled and ScriptActive do
-                if (tick() - LastSellTime) >= 600 then
-                    pcall(function() RF_Sell:InvokeServer() end)
-                    LastSellTime = tick()
-                end
 
+        task.spawn(function()
+            while AutoSellEnabled and ScriptActive do
                 local Replion = require(game:GetService("ReplicatedStorage").Packages.Replion).Client:WaitReplion("Data", 1)
                 if Replion then
                      local s, d = pcall(function() return Replion:GetExpect("Inventory") end)
                      if s and d and d.Items then
-                        if #d.Items >= SellValue then
+                        if #d.Items >= Settings.AutoSellThreshold then
                             pcall(function() RF_Sell:InvokeServer() end)
-                            LastSellTime = tick()
-                            task.wait(1)
+                            ShowNotification("Auto Sold " .. #d.Items .. " fish!", false)
+                            task.wait(2)
                         end
                      end
                 end
                 task.wait(1)
             end
         end)
+    end
+end)
+
+CreateInput(Page_Fhising, "Auto Sell Threshold (Items)", tostring(Settings.AutoSellThreshold), function(text)
+    local val = tonumber(text)
+    if val and val > 0 then
+        Settings.AutoSellThreshold = math.floor(val)
+        ShowNotification("Auto Sell Threshold set to " .. Settings.AutoSellThreshold, false)
     end
 end)
 
@@ -1483,7 +1486,7 @@ SaveBtn.MouseButton1Click:Connect(function()
         "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName",
         "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups",
         "EvolvedEnabled", "InstantFishingEnabled", "InstantFishingCompleteDelay",
-        "InstantFishingCastDelay", "InstantFishingClaimAmount"
+        "InstantFishingCastDelay", "InstantFishingClaimAmount", "AutoSellThreshold"
     }
     
     local cleanSettings = {}
@@ -1523,10 +1526,10 @@ SaveBtn.MouseButton1Click:Connect(function()
     end
 
     local success, err = pcall(function()
-        if not isfolder("NikeeHUB_Configs") then makefolder("NikeeHUB_Configs") end
-        writefile("NikeeHUB_Configs/" .. name .. ".json", encodedData)
+        if not isfolder("Nikee_Configs") then makefolder("Nikee_Configs") end
+        writefile("Nikee_Configs/" .. name .. ".json", encodedData)
     end)
-    
+
     if success then
         ShowNotification("Config Saved!", false)
         RefreshConfigList()
@@ -1543,13 +1546,13 @@ end)
 
 DeleteBtn.MouseButton1Click:Connect(function()
     if not selectedConfig then return end
-    delfile("NikeeHUB_Configs/" .. selectedConfig .. ".json")
+    delfile("Nikee_Configs/" .. selectedConfig .. ".json")
     ShowNotification("Deleted!", false)
     RefreshConfigList()
 end)
 
 local AutoLoadToggle = nil
-local AutoLoadConfigPath = "NikeeHUB_Configs/autoload.json"
+local AutoLoadConfigPath = "Nikee_Configs/autoload.json"
 local currentAutoLoad = nil
 
 local function SaveAutoLoadPref(configName, enabled)
