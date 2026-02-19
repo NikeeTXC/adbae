@@ -971,12 +971,11 @@ end)
 
 -- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
 local AutoEquipRodLastEquipTime = 0
-local AutoEquipRodCooldown = 0.3
-local AutoEquipDebug = true -- Debug mode
+local AutoEquipRodCooldown = 0.8 -- Delay lebih lama agar tidak terlalu cepat
 
 task.spawn(function()
     local lastEquipTime = 0
-    local equipCooldown = 0.3
+    local equipCooldown = 0.8 -- Delay 0.8 detik (tidak terlalu cepat)
     
     while ScriptActive do
         task.wait(0.15)
@@ -1007,9 +1006,7 @@ task.spawn(function()
                             if EquipRemote then
                                 EquipRemote:FireServer(1)
                                 lastEquipTime = tick()
-                                if AutoEquipDebug then
-                                    ShowNotification("🎣 Equipped: " .. (equippedTool and equippedTool.Name or "None"), false)
-                                end
+                                -- Debug notification dihapus
                             end
                         end)
                         
