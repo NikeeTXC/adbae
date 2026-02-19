@@ -1057,6 +1057,22 @@ end)
 
 local AutoSellEnabled = false
 
+local function getFishCount()
+    local Replion = require(game:GetService("ReplicatedStorage").Packages.Replion).Client:WaitReplion("Data", 1)
+    if not Replion then return 0 end
+    local s, d = pcall(function() return Replion:GetExpect("Inventory") end)
+    if not s or not d or not d.Items then return 0 end
+    
+    local fishCount = 0
+    for _, item in ipairs(d.Items) do
+        -- Count only fish (Category == 1 is fish in Fish It)
+        if item.Category == 1 then
+            fishCount = fishCount + 1
+        end
+    end
+    return fishCount
+end
+
 CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
     AutoSellEnabled = state
     if state then
@@ -1065,16 +1081,11 @@ CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
 
         task.spawn(function()
             while AutoSellEnabled and ScriptActive do
-                local Replion = require(game:GetService("ReplicatedStorage").Packages.Replion).Client:WaitReplion("Data", 1)
-                if Replion then
-                     local s, d = pcall(function() return Replion:GetExpect("Inventory") end)
-                     if s and d and d.Items then
-                        if #d.Items >= Settings.AutoSellThreshold then
-                            pcall(function() RF_Sell:InvokeServer() end)
-                            ShowNotification("Auto Sold " .. #d.Items .. " fish!", false)
-                            task.wait(2)
-                        end
-                     end
+                local currentFish = getFishCount()
+                if currentFish >= Settings.AutoSellThreshold then
+                    pcall(function() RF_Sell:InvokeServer() end)
+                    ShowNotification("Auto Sold " .. currentFish .. " fish!", false)
+                    task.wait(2)
                 end
                 task.wait(1)
             end
