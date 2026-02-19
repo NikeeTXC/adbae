@@ -160,7 +160,25 @@ local Settings = {
     InstantFishingClaimAmount = 3,
 
     -- Auto Sell Settings
-    AutoSellThreshold = 600
+    AutoSellThreshold = 600,
+    AutoSellEnabled = false,
+
+    -- Auto Weather Settings
+    AutoWeatherEnabled = false,
+
+    -- Auto Totem Settings
+    AutoTotemEnabled = false,
+    SelectedTotem = "Luck Totem",
+
+    -- Detector Stuck Settings
+    DetectorStuckEnabled = false,
+    StuckThreshold = 15,
+
+    -- Auto Click Fishing
+    AutoClickFishingEnabled = false,
+
+    -- Walk On Water
+    WalkOnWaterEnabled = false
 }
 
 task.spawn(function()
@@ -889,7 +907,8 @@ local LastFishCount = 0
 local StuckTimer = 0
 local SavedCFrame = nil
 
-CreateToggle(Page_Fhising, "Detector Stuck (15s)", false, function(state)
+CreateToggle(Page_Fhising, "Detector Stuck (15s)", "DetectorStuckEnabled", function(state)
+    Settings.DetectorStuckEnabled = state
     DetectorStuckEnabled = state
     if state then
         LastFishCount = getFishCount()
@@ -934,8 +953,9 @@ CreateToggle(Page_Fhising, "Detector Stuck (15s)", false, function(state)
 end)
 
 local AutoShakeEnabled = false
-CreateToggle(Page_Fhising, "Auto Click Fishing", false, function(val)
+CreateToggle(Page_Fhising, "Auto Click Fishing", "AutoClickFishingEnabled", function(val)
     AutoShakeEnabled = val
+    Settings.AutoClickFishingEnabled = val
     local clickEffect = Players.LocalPlayer.PlayerGui:FindFirstChild("!!! Click Effect")
     if AutoShakeEnabled then
         if clickEffect then clickEffect.Enabled = false end
@@ -1082,8 +1102,9 @@ end)
 
 local AutoSellEnabled = false
 
-CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
+CreateToggle(Page_Fhising, "Auto Sell", "AutoSellEnabled", function(state)
     AutoSellEnabled = state
+    Settings.AutoSellEnabled = state
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
         if not RF_Sell then ShowNotification("Remote Sell Missing!", true) AutoSellEnabled = false return end
@@ -1117,8 +1138,9 @@ end)
 local WeatherList = { "Wind", "Cloudy", "Storm" }
 local SimpleWeatherEnabled = false
 
-CreateToggle(Page_Fhising, "Enable Auto Buy Weather", false, function(state)
+CreateToggle(Page_Fhising, "Enable Auto Buy Weather", "AutoWeatherEnabled", function(state)
     SimpleWeatherEnabled = state
+    Settings.AutoWeatherEnabled = state
     if state then
         local RF_BuyWeather = GetRemote("RF/PurchaseWeatherEvent")
         if not RF_BuyWeather then ShowNotification("Remote Weather Missing!", true) SimpleWeatherEnabled = false return end
@@ -1141,9 +1163,13 @@ local SelectedTotem = "Luck Totem"
 local TotemMap = {["Luck Totem"]=1, ["Mutation Totem"]=2, ["Shiny Totem"]=3}
 local AutoTotemEnabled = false
 
-CreateDropdown(Page_Fhising, "Select Totem", TotemList, "Luck Totem", function(v) SelectedTotem = v end)
-CreateToggle(Page_Fhising, "Enable Auto Spawn Totem", false, function(state)
+CreateDropdown(Page_Fhising, "Select Totem", TotemList, Settings.SelectedTotem or "Luck Totem", function(v) 
+    SelectedTotem = v 
+    Settings.SelectedTotem = v 
+end)
+CreateToggle(Page_Fhising, "Enable Auto Spawn Totem", "AutoTotemEnabled", function(state)
     AutoTotemEnabled = state
+    Settings.AutoTotemEnabled = state
     if state then
         local RE_Spawn = GetRemote("RE/SpawnTotem")
         local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
@@ -1196,8 +1222,9 @@ task.spawn(function()
     print("XAL: Anti-AFK Active")
 end)
 
-CreateToggle(Page_Setting, "Walk On Water", false, function(state)
+CreateToggle(Page_Setting, "Walk On Water", "WalkOnWaterEnabled", function(state)
     WalkOnWaterEnabled = state
+    Settings.WalkOnWaterEnabled = state
     if state then
         if not WaterPlatform then
              WaterPlatform = Instance.new("Part")
@@ -1497,6 +1524,11 @@ local function LoadConfig(configName)
             if UI_CastDelayInput then UI_CastDelayInput.Text = tostring(Settings.InstantFishingCastDelay or "0.1") end
             if UI_ClaimAmountInput then UI_ClaimAmountInput.Text = tostring(Settings.InstantFishingClaimAmount or "3") end
             if UI_AutoSellThresholdInput then UI_AutoSellThresholdInput.Text = tostring(Settings.AutoSellThreshold or "600") end
+            
+            -- Update Selected Totem
+            if Settings.SelectedTotem then
+                SelectedTotem = Settings.SelectedTotem
+            end
         end
 
         ShowNotification("Config Loaded!", false)
@@ -1516,7 +1548,9 @@ SaveBtn.MouseButton1Click:Connect(function()
         "LeaveEnabled", "PlayerNonPSAuto", "ForeignDetection", "SpoilerName",
         "PingMonitor", "AutoExecute", "NoAnimation", "RemoveVFX", "DisablePopups",
         "EvolvedEnabled", "InstantFishingEnabled", "InstantFishingCompleteDelay",
-        "InstantFishingCastDelay", "InstantFishingClaimAmount", "AutoSellThreshold"
+        "InstantFishingCastDelay", "InstantFishingClaimAmount", "AutoSellThreshold",
+        "AutoSellEnabled", "AutoWeatherEnabled", "AutoTotemEnabled", "SelectedTotem",
+        "DetectorStuckEnabled", "StuckThreshold", "AutoClickFishingEnabled", "WalkOnWaterEnabled"
     }
     
     local cleanSettings = {}
