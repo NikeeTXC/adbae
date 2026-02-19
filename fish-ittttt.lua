@@ -846,13 +846,37 @@ local function GetRemote(name)
 end
 
 local function getFishCount()
+    -- UI method - most accurate for Fish It (works when inventory is open)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui", 5)
-    if not playerGui then return 0 end
-    local inv = playerGui:FindFirstChild("Inventory")
-    if inv then
-        local label = inv:FindFirstChild("Main") and inv.Main:FindFirstChild("Top") and inv.Main.Top:FindFirstChild("Options") and inv.Main.Top.Options:FindFirstChild("Fish") and inv.Main.Top.Options.Fish:FindFirstChild("Label") and inv.Main.Top.Options.Fish.Label:FindFirstChild("BagSize")
-        if label then
-            return tonumber((label.Text or "0/???"):match("(%d+)/")) or 0
+    if playerGui then
+        local inv = playerGui:FindFirstChild("Inventory")
+        if inv then
+            local mainFrame = inv:FindFirstChild("Main")
+            if mainFrame then
+                local topFrame = mainFrame:FindFirstChild("Top")
+                if topFrame then
+                    local options = topFrame:FindFirstChild("Options")
+                    if options then
+                        local fishOption = options:FindFirstChild("Fish")
+                        if fishOption then
+                            local label = fishOption:FindFirstChild("Label") and fishOption.Label:FindFirstChild("BagSize")
+                            if label then
+                                local count = tonumber((label.Text or "0/???"):match("(%d+)/"))
+                                if count then return count end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Fallback: Count all items in inventory (in Fish It, bag inventory = fish only)
+    local Replion = require(game:GetService("ReplicatedStorage").Packages.Replion).Client:WaitReplion("Data", 1)
+    if Replion then
+        local s, d = pcall(function() return Replion:GetExpect("Inventory") end)
+        if s and d and d.Items then
+            return #d.Items
         end
     end
     return 0
@@ -1057,39 +1081,33 @@ end)
 
 local AutoSellEnabled = false
 
-local function getFishCount()
-    local Replion = require(game:GetService("ReplicatedStorage").Packages.Replion).Client:WaitReplion("Data", 1)
-    if not Replion then return 0 end
-    local s, d = pcall(function() return Replion:GetExpect("Inventory") end)
-    if not s or not d or not d.Items then return 0 end
-    
-    local fishCount = 0
-    for _, item in ipairs(d.Items) do
-        -- Count only fish (Category == 1 is fish in Fish It)
-        if item.Category == 1 then
-            fishCount = fishCount + 1
-        end
-    end
-    return fishCount
-end
-
 CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
     AutoSellEnabled = state
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
         if not RF_Sell then ShowNotification("Remote Sell Missing!", true) AutoSellEnabled = false return end
+        
+        -- Debug: show current fish count
+        local initialFish = getFishCount()
+        ShowNotification("Auto Sell ON | Fish: " .. initialFish .. "/" .. Settings.AutoSellThreshold, false)
 
         task.spawn(function()
+            local lastSellCount = 0
             while AutoSellEnabled and ScriptActive do
                 local currentFish = getFishCount()
-                if currentFish >= Settings.AutoSellThreshold then
+                print("[AutoSell] Fish Count:", currentFish, "Threshold:", Settings.AutoSellThreshold)
+                if currentFish >= Settings.AutoSellThreshold and currentFish ~= lastSellCount and currentFish > 0 then
                     pcall(function() RF_Sell:InvokeServer() end)
                     ShowNotification("Auto Sold " .. currentFish .. " fish!", false)
-                    task.wait(2)
+                    print("[AutoSell] Sold at count:", currentFish)
+                    lastSellCount = currentFish
+                    task.wait(3)
                 end
-                task.wait(1)
+                task.wait(0.5)
             end
         end)
+    else
+        ShowNotification("Auto Sell OFF", false)
     end
 end)
 
