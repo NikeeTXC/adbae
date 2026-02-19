@@ -971,11 +971,11 @@ end)
 
 -- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
 local AutoEquipRodLastEquipTime = 0
-local AutoEquipRodCooldown = 1 -- Delay 1 detik
+local AutoEquipRodCooldown = 0.5 -- Delay 0.5 detik
 
 task.spawn(function()
     local lastEquipTime = 0
-    local equipCooldown = 1 -- Delay 1 detik
+    local equipCooldown = 0.5 -- Delay 0.5 detik
     
     while ScriptActive do
         if Settings.AutoEquipRodEnabled then
@@ -1010,7 +1010,7 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.05) -- Check lebih cepat, tapi equip tetap ada cooldown 1 detik
+        task.wait(0.05) -- Check lebih cepat, tapi equip tetap ada cooldown 0.5 detik
     end
 end)
 
