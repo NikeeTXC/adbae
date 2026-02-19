@@ -926,6 +926,16 @@ end
 
 local function IF_FishingLoop()
     while IF.Enabled and ScriptActive do
+        -- Auto Equip Rod (integrated from NikeeHUB.lua)
+        if Settings.AutoEquipRodEnabled then
+            pcall(function()
+                local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
+                if RE_Equip then
+                    RE_Equip:FireServer(1)
+                end
+            end)
+        end
+        
         -- Cancel
         pcall(function() IF.Remotes.Cancel:InvokeServer() end)
         -- Charge
@@ -969,89 +979,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Equip Rod Logic
-local AutoEquipRodEnabled = false
-local RE_EquipTool = nil
-local LastEquippedSlot = 1
-
-local function AutoEquipRod_Init()
-    if RE_EquipTool then return true end
-    local s, r = pcall(function()
-        local np = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
-        if np then
-            RE_EquipTool = np:WaitForChild("RE/EquipToolFromHotbar", 3)
-            return RE_EquipTool ~= nil
-        end
-        return false
-    end)
-    return s and r
-end
-
-local function AutoEquipRod_Equip()
-    if not AutoEquipRod_Init() then
-        return false
-    end
-    
-    local success = pcall(function()
-        RE_EquipTool:FireServer(LastEquippedSlot)
-    end)
-    return success
-end
-
-local function GetCurrentTool()
-    local char = Players.LocalPlayer.Character
-    if char then
-        return char:FindFirstChildOfClass("Tool")
-    end
-    return nil
-end
-
--- Continuous Auto Equip Rod Monitor
-task.spawn(function()
-    local lastCheckTime = 0
-    local equipCooldown = 0.3 -- Cooldown untuk prevent spam equip
-    local lastEquippedName = ""
-    
-    while ScriptActive do
-        if Settings.AutoEquipRodEnabled then
-            if not AutoEquipRodEnabled then
-                AutoEquipRodEnabled = true
-                if AutoEquipRod_Init() then
-                    AutoEquipRod_Equip()
-                    ShowNotification("Auto Equip Rod Enabled", false)
-                else
-                    Settings.AutoEquipRodEnabled = false
-                    AutoEquipRodEnabled = false
-                end
-            else
-                -- Continuous monitoring - re-equip rod jika memegang ikan
-                local currentTool = GetCurrentTool()
-                if currentTool then
-                    local toolName = currentTool.Name:lower()
-                    -- Cek jika memegang ikan atau bukan rod
-                    if toolName:find("fish") or (not toolName:find("rod") and not toolName:find("fishing")) then
-                        local now = tick()
-                        if now - lastCheckTime > equipCooldown then
-                            local success = AutoEquipRod_Equip()
-                            if success and currentTool.Name ~= lastEquippedName then
-                                ShowNotification("Equipped: Rod", false)
-                                lastEquippedName = "Rod"
-                            end
-                            lastCheckTime = now
-                        end
-                    else
-                        lastEquippedName = currentTool.Name
-                    end
-                end
-            end
-        elseif AutoEquipRodEnabled then
-            AutoEquipRodEnabled = false
-            ShowNotification("Auto Equip Rod Disabled", false)
-        end
-        task.wait(0.2)
-    end
-end)
-
 -- Auto Equip Rod UI Section (Moved to Top)
 do
     local lbl = Instance.new("TextLabel", Page_Fhising)
@@ -1067,18 +994,9 @@ end
 CreateToggle(Page_Fhising, "Enable Auto Equip Rod", "AutoEquipRodEnabled", function(state)
     Settings.AutoEquipRodEnabled = state
     if state then
-        if not AutoEquipRod_Init() then
-            ShowNotification("Equip Remote Missing!", true)
-            Settings.AutoEquipRodEnabled = false
-            return
-        end
-        AutoEquipRodEnabled = true
-        local success = AutoEquipRod_Equip()
-        if success then
-            ShowNotification("Auto Equip Rod Active!", false)
-        end
+        ShowNotification("Auto Equip Rod Enabled", false)
     else
-        AutoEquipRodEnabled = false
+        ShowNotification("Auto Equip Rod Disabled", false)
     end
 end)
 
