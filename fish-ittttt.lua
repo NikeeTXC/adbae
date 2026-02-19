@@ -2562,11 +2562,16 @@ local function CheckAndSend(msg)
     end
 end
 
-if TextChatService then 
-    TextChatService.OnIncomingMessage = function(m) 
+if TextChatService then
+    TextChatService.OnIncomingMessage = function(m)
         if not ScriptActive then return end
-        if m.TextSource == nil then CheckAndSend(m.Text) end 
-    end 
+        if m.TextSource == nil then
+            local channel = m.TextChannel
+            if channel and (channel.Name == "RBXGeneral" or channel.Name == "General") then
+                CheckAndSend(m.Text)
+            end
+        end
+    end
 end
 
 local ChatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
