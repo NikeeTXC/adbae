@@ -1622,23 +1622,33 @@ local currentAutoLoad = nil
 local function SaveAutoLoadPref(configName, enabled)
     local data = { config = configName, enabled = enabled }
     local json = HttpService:JSONEncode(data)
-    writefile(AutoLoadConfigPath, json)
-    currentAutoLoad = enabled and configName or nil
-    print("[AutoLoad] Saved:", configName, "Enabled:", enabled)
+    local success, err = pcall(function()
+        writefile(AutoLoadConfigPath, json)
+    end)
+    if success then
+        currentAutoLoad = enabled and configName or nil
+        print("[AutoLoad] ✓ Saved:", configName, "Enabled:", enabled)
+        print("[AutoLoad] ✓ File path:", AutoLoadConfigPath)
+        print("[AutoLoad] ✓ Content:", json)
+    else
+        print("[AutoLoad] ✗ Save failed:", err)
+    end
 end
 
 local function GetAutoLoadPref()
-    if isfile(AutoLoadConfigPath) then
+    local exists = isfile(AutoLoadConfigPath)
+    print("[AutoLoad] File exists:", exists, "Path:", AutoLoadConfigPath)
+    if exists then
         local s, c = pcall(function() return readfile(AutoLoadConfigPath) end)
+        print("[AutoLoad] Read success:", s, "Content:", c)
         if s then
             local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
+            print("[AutoLoad] Decode success:", s2, "Data:", d)
             if s2 and d then 
-                print("[AutoLoad] Loaded pref:", d)
                 return d 
             end
         end
     end
-    print("[AutoLoad] No autoload file found")
     return nil
 end
 
@@ -2719,13 +2729,15 @@ task.spawn(StartInventoryWatcher)
 print("✅ NikeeHUB System Session v1.0 Loaded!")
 
 task.delay(2, function()
+    print("[AutoLoad] === Starting autoload check ===")
     local autoPref = GetAutoLoadPref()
-    print("[AutoLoad] Pref:", autoPref)
+    print("[AutoLoad] Pref result:", autoPref)
     if autoPref and autoPref.enabled and autoPref.config and autoPref.config ~= "" then
         print("🔄 Autoloading Config: " .. autoPref.config)
         local success = LoadConfig(autoPref.config)
-        print("[AutoLoad] Result:", success)
+        print("[AutoLoad] Load result:", success)
     else
-        print("[AutoLoad] No autoload config set")
+        print("[AutoLoad] No autoload config set or enabled")
     end
+    print("[AutoLoad] === Autoload check done ===")
 end)
