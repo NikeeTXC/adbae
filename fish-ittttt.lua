@@ -1621,8 +1621,10 @@ local currentAutoLoad = nil
 
 local function SaveAutoLoadPref(configName, enabled)
     local data = { config = configName, enabled = enabled }
-    writefile(AutoLoadConfigPath, HttpService:JSONEncode(data))
+    local json = HttpService:JSONEncode(data)
+    writefile(AutoLoadConfigPath, json)
     currentAutoLoad = enabled and configName or nil
+    print("[AutoLoad] Saved:", configName, "Enabled:", enabled)
 end
 
 local function GetAutoLoadPref()
@@ -1630,9 +1632,13 @@ local function GetAutoLoadPref()
         local s, c = pcall(function() return readfile(AutoLoadConfigPath) end)
         if s then
             local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
-            if s2 and d then return d end
+            if s2 and d then 
+                print("[AutoLoad] Loaded pref:", d)
+                return d 
+            end
         end
     end
+    print("[AutoLoad] No autoload file found")
     return nil
 end
 
@@ -1695,8 +1701,7 @@ ClearAutoLoadBtn.MouseButton1Click:Connect(function()
         return 
     end
     
-    writefile(AutoLoadConfigPath, HttpService:JSONEncode({ config = "", enabled = false }))
-    currentAutoLoad = nil
+    SaveAutoLoadPref("", false)
     ShowNotification("Autoload Cleared!", false)
     UpdateAutoLoadBtnState()
 end)
@@ -2713,10 +2718,14 @@ task.spawn(StartInventoryWatcher)
 
 print("✅ NikeeHUB System Session v1.0 Loaded!")
 
-task.delay(1, function()
+task.delay(2, function()
     local autoPref = GetAutoLoadPref()
-    if autoPref and autoPref.enabled and autoPref.config then
+    print("[AutoLoad] Pref:", autoPref)
+    if autoPref and autoPref.enabled and autoPref.config and autoPref.config ~= "" then
         print("🔄 Autoloading Config: " .. autoPref.config)
-        LoadConfig(autoPref.config)
+        local success = LoadConfig(autoPref.config)
+        print("[AutoLoad] Result:", success)
+    else
+        print("[AutoLoad] No autoload config set")
     end
 end)
