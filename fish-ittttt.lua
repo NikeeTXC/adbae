@@ -1619,6 +1619,17 @@ local AutoLoadToggle = nil
 local AutoLoadConfigPath = "Nikee_Configs/autoload.json"
 local currentAutoLoad = nil
 
+-- Get executor working directory
+local function GetExecutorPath()
+    -- Try common executor path functions
+    if getexecutorpath then
+        return getexecutorpath()
+    elseif getfenv and getfenv().getexecutorpath then
+        return getfenv().getexecutorpath()
+    end
+    return nil
+end
+
 local function SaveAutoLoadPref(configName, enabled)
     local data = { config = configName, enabled = enabled }
     local json = HttpService:JSONEncode(data)
@@ -1628,27 +1639,53 @@ local function SaveAutoLoadPref(configName, enabled)
     if success then
         currentAutoLoad = enabled and configName or nil
         print("[AutoLoad] ✓ Saved:", configName, "Enabled:", enabled)
-        print("[AutoLoad] ✓ File path:", AutoLoadConfigPath)
-        print("[AutoLoad] ✓ Content:", json)
+        print("[AutoLoad] ✓ Path:", AutoLoadConfigPath)
+        
+        -- Also try to save in executor root if different
+        local execPath = GetExecutorPath()
+        if execPath and execPath ~= "" then
+            pcall(function()
+                writefile(execPath .. "/Nikee_Configs/autoload.json", json)
+                print("[AutoLoad] ✓ Also saved to executor path")
+            end)
+        end
     else
         print("[AutoLoad] ✗ Save failed:", err)
     end
 end
 
 local function GetAutoLoadPref()
+    -- Try to read from default path first
     local exists = isfile(AutoLoadConfigPath)
-    print("[AutoLoad] File exists:", exists, "Path:", AutoLoadConfigPath)
     if exists then
         local s, c = pcall(function() return readfile(AutoLoadConfigPath) end)
-        print("[AutoLoad] Read success:", s, "Content:", c)
         if s then
             local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
-            print("[AutoLoad] Decode success:", s2, "Data:", d)
             if s2 and d then 
+                print("[AutoLoad] ✓ Loaded from default path:", d)
                 return d 
             end
         end
     end
+    
+    -- Try executor path if available
+    local execPath = GetExecutorPath()
+    if execPath and execPath ~= "" then
+        local execAutoLoadPath = execPath .. "/Nikee_Configs/autoload.json"
+        local execExists = isfile(execAutoLoadPath)
+        if execExists then
+            local s, c = pcall(function() return readfile(execAutoLoadPath) end)
+            if s then
+                local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
+                if s2 and d then 
+                    print("[AutoLoad] ✓ Loaded from executor path:", d)
+                    return d 
+                end
+            end
+        end
+    end
+    
+    print("[AutoLoad] No autoload file found")
     return nil
 end
 
@@ -1711,9 +1748,27 @@ ClearAutoLoadBtn.MouseButton1Click:Connect(function()
         return 
     end
     
-    SaveAutoLoadPref("", false)
+    local success = pcall(function()
+        if isfile(AutoLoadConfigPath) then
+            delfile(AutoLoadConfigPath)
+        end
+    end)
+    
+    -- Also try to delete from executor path
+    local execPath = GetExecutorPath()
+    if execPath and execPath ~= "" then
+        pcall(function()
+            local execAutoLoadPath = execPath .. "/Nikee_Configs/autoload.json"
+            if isfile(execAutoLoadPath) then
+                delfile(execAutoLoadPath)
+            end
+        end)
+    end
+    
+    currentAutoLoad = nil
     ShowNotification("Autoload Cleared!", false)
     UpdateAutoLoadBtnState()
+    print("[AutoLoad] ✓ Autoload cleared")
 end)
 
 local originalRefresh = RefreshConfigList
@@ -2730,12 +2785,28 @@ print("✅ NikeeHUB System Session v1.0 Loaded!")
 
 task.delay(2, function()
     print("[AutoLoad] === Starting autoload check ===")
+    
     local autoPref = GetAutoLoadPref()
     print("[AutoLoad] Pref result:", autoPref)
+    
     if autoPref and autoPref.enabled and autoPref.config and autoPref.config ~= "" then
         print("🔄 Autoloading Config: " .. autoPref.config)
-        local success = LoadConfig(autoPref.config)
-        print("[AutoLoad] Load result:", success)
+        
+        -- Check if config file exists
+        local configPath = "Nikee_Configs/" .. autoPref.config .. ".json"
+        local configExists = pcall(function() return isfile(configPath) end)
+        print("[AutoLoad] Config file exists:", configExists, "Path:", configPath)
+        
+        if configExists then
+            local success = LoadConfig(autoPref.config)
+            print("[AutoLoad] Load result:", success)
+            if success then
+                ShowNotification("AutoLoaded: " .. autoPref.config, false)
+            end
+        else
+            print("[AutoLoad] Config file not found!")
+            ShowNotification("Autoload file missing!", true)
+        end
     else
         print("[AutoLoad] No autoload config set or enabled")
     end
