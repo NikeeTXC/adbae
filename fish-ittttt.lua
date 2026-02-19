@@ -971,11 +971,11 @@ end)
 
 -- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
 local AutoEquipRodLastEquipTime = 0
-local AutoEquipRodCooldown = 3 -- Delay 3 detik
+local AutoEquipRodCooldown = 1 -- Delay 1 detik
 
 task.spawn(function()
     local lastEquipTime = 0
-    local equipCooldown = 3 -- Delay 3 detik (lebih lama, tidak spam)
+    local equipCooldown = 1 -- Delay 1 detik
     
     while ScriptActive do
         task.wait(0.15)
