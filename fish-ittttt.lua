@@ -979,6 +979,95 @@ task.spawn(function()
     end
 end)
 
+-- Auto Equip Rod - Continuous Monitor (seperti NikeeHUB.lua)
+local function GetEquippedTool()
+    local char = Players.LocalPlayer.Character
+    if char then
+        -- Method 1: FindFirstChildOfClass
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then return tool end
+        
+        -- Method 2: Check common tool names in Fish It
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") or (child.Name:lower():find("rod") or child.Name:lower():find("fish")) then
+                return child
+            end
+        end
+    end
+    return nil
+end
+
+local function IsHoldingFish(tool)
+    if not tool then return false end
+    local name = tool.Name:lower()
+    return name:find("fish") ~= nil
+end
+
+local function IsHoldingRod(tool)
+    if not tool then return false end
+    local name = tool.Name:lower()
+    return name:find("rod") ~= nil or name:find("fishing") ~= nil
+end
+
+local AutoEquipDebug = true -- Set true untuk debug notification
+
+task.spawn(function()
+    local lastEquipTime = 0
+    local equipCooldown = 0.5
+    local lastToolName = ""
+    
+    while ScriptActive do
+        if Settings.AutoEquipRodEnabled then
+            local tool = GetEquippedTool()
+            local now = tick()
+            
+            -- Equip rod jika: tidak memegang tool, atau memegang ikan (bukan rod)
+            local shouldEquip = false
+            local reason = ""
+            
+            if not tool then
+                -- Tidak memegang apapun
+                shouldEquip = true
+                reason = "No tool"
+            elseif IsHoldingFish(tool) then
+                -- Memegang ikan
+                shouldEquip = true
+                reason = "Fish: " .. tool.Name
+            elseif not IsHoldingRod(tool) then
+                -- Memegang sesuatu yang bukan rod
+                shouldEquip = true
+                reason = "Not rod: " .. tool.Name
+            end
+            
+            if shouldEquip and now - lastEquipTime > equipCooldown then
+                local success = pcall(function()
+                    local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
+                    if RE_Equip then
+                        RE_Equip:FireServer(1)
+                        lastEquipTime = now
+                        if AutoEquipDebug then
+                            ShowNotification("🎣 " .. reason, false)
+                        end
+                    end
+                end)
+            end
+            
+            if tool and tool.Name ~= lastToolName then
+                lastToolName = tool.Name
+                if AutoEquipDebug then
+                    print("[AutoEquip] Current tool:", tool.Name)
+                end
+            elseif not tool and lastToolName ~= "" then
+                lastToolName = ""
+                if AutoEquipDebug then
+                    print("[AutoEquip] No tool")
+                end
+            end
+        end
+        task.wait(0.15)
+    end
+end)
+
 -- Auto Equip Rod UI Section (Moved to Top)
 do
     local lbl = Instance.new("TextLabel", Page_Fhising)
