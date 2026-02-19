@@ -1219,7 +1219,7 @@ task.spawn(function()
     for i, v in pairs(getconnections(Players.LocalPlayer.Idled)) do
         if v.Disable then v:Disable() end
     end
-    print("XAL: Anti-AFK Active")
+    print("Script Aktif cuuy")
 end)
 
 CreateToggle(Page_Setting, "Walk On Water", "WalkOnWaterEnabled", function(state)
@@ -1662,7 +1662,7 @@ local function GetAutoLoadPref()
         if s then
             local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
             if s2 and d then 
-                print("[AutoLoad] ✓ Loaded from default path:", d)
+                print("[AutoLoad] ✓ Loaded from default path | Config:", d.config, "| Enabled:", d.enabled)
                 return d 
             end
         end
@@ -1678,7 +1678,7 @@ local function GetAutoLoadPref()
             if s then
                 local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
                 if s2 and d then 
-                    print("[AutoLoad] ✓ Loaded from executor path:", d)
+                    print("[AutoLoad] ✓ Loaded from executor path | Config:", d.config, "| Enabled:", d.enabled)
                     return d 
                 end
             end
