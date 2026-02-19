@@ -212,9 +212,10 @@ task.spawn(function()
     if not success then warn("NikeeHUB: AutoExecute Not Supported: " .. tostring(err)) end
 end)
 
-local TagList = {} 
-local TagUIElements = {} 
+local TagList = {}
+local TagUIElements = {}
 local UI_FishInput, UI_LeaveInput, UI_ListInput, UI_AdminInput
+local UI_CompleteDelayInput, UI_CastDelayInput, UI_ClaimAmountInput, UI_AutoSellThresholdInput
 
 local SessionStart = tick()
 local SessionStats = {
@@ -1042,7 +1043,7 @@ CreateToggle(Page_Fhising, "Enable Instant Fishing", "InstantFishingEnabled", fu
     end
 end)
 
-CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishingCompleteDelay), function(text)
+UI_CompleteDelayInput = CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishingCompleteDelay), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingCompleteDelay = val
@@ -1050,7 +1051,7 @@ CreateInput(Page_Fhising, "Complete Delay (s)", tostring(Settings.InstantFishing
     end
 end)
 
-CreateInput(Page_Fhising, "Cast Delay (s)", tostring(Settings.InstantFishingCastDelay), function(text)
+UI_CastDelayInput = CreateInput(Page_Fhising, "Cast Delay (s)", tostring(Settings.InstantFishingCastDelay), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingCastDelay = val
@@ -1058,7 +1059,7 @@ CreateInput(Page_Fhising, "Cast Delay (s)", tostring(Settings.InstantFishingCast
     end
 end)
 
-CreateInput(Page_Fhising, "Claim Amount", tostring(Settings.InstantFishingClaimAmount), function(text)
+UI_ClaimAmountInput = CreateInput(Page_Fhising, "Claim Amount", tostring(Settings.InstantFishingClaimAmount), function(text)
     local val = tonumber(text)
     if val then
         Settings.InstantFishingClaimAmount = math.floor(val)
@@ -1105,7 +1106,7 @@ CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
     end
 end)
 
-CreateInput(Page_Fhising, "Auto Sell Threshold (Items)", tostring(Settings.AutoSellThreshold), function(text)
+UI_AutoSellThresholdInput = CreateInput(Page_Fhising, "Auto Sell Threshold (Items)", tostring(Settings.AutoSellThreshold), function(text)
     local val = tonumber(text)
     if val and val > 0 then
         Settings.AutoSellThreshold = math.floor(val)
@@ -1490,6 +1491,12 @@ local function LoadConfig(configName)
                     end
                 end
             end
+            
+            -- Update input fields
+            if UI_CompleteDelayInput then UI_CompleteDelayInput.Text = tostring(Settings.InstantFishingCompleteDelay or "0.7") end
+            if UI_CastDelayInput then UI_CastDelayInput.Text = tostring(Settings.InstantFishingCastDelay or "0.1") end
+            if UI_ClaimAmountInput then UI_ClaimAmountInput.Text = tostring(Settings.InstantFishingClaimAmount or "3") end
+            if UI_AutoSellThresholdInput then UI_AutoSellThresholdInput.Text = tostring(Settings.AutoSellThreshold or "600") end
         end
 
         ShowNotification("Config Loaded!", false)
