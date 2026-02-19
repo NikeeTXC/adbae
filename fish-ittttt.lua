@@ -969,7 +969,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
+-- Auto Equip Rod - Continuous Monitor
 local AutoEquipRodLastEquipTime = 0
 local AutoEquipRodCooldown = 0.5 -- Delay 0.5 detik
 
@@ -986,18 +986,19 @@ task.spawn(function()
                     local equippedTool = humanoid:FindFirstChildOfClass("Tool")
                     local shouldEquipRod = false
                     
-                    if equippedTool then
-                        local toolName = equippedTool.Name
-                        -- Check if it's NOT a fishing rod
-                        if not string.find(toolName:lower(), "rod") then
+                    if not equippedTool then
+                        -- Tidak memegang apapun → equip rod
+                        shouldEquipRod = true
+                    else
+                        -- Memegang tool, check apakah ini rod?
+                        local toolName = equippedTool.Name:lower()
+                        -- Hanya equip jika BUKAN rod (memegang ikan atau tool lain)
+                        if not toolName:find("rod") and not toolName:find("fishing") then
                             shouldEquipRod = true
                         end
-                    else
-                        -- No tool equipped
-                        shouldEquipRod = true
                     end
                     
-                    -- Equip rod with cooldown check
+                    -- Equip rod dengan cooldown
                     if shouldEquipRod and (tick() - lastEquipTime) > equipCooldown then
                         pcall(function()
                             local EquipRemote = GetRemote("RE/EquipToolFromHotbar")
@@ -1010,7 +1011,7 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.05) -- Check lebih cepat, tapi equip tetap ada cooldown 0.5 detik
+        task.wait(0.05)
     end
 end)
 
