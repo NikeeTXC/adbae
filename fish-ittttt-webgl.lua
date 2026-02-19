@@ -2503,13 +2503,13 @@ local function SendWebhook(data, category)
     if category == "SECRET" then
         SessionStats.Secret = SessionStats.Secret + 1
         embedTitle = "🎣 New Fish Caught!"
-        embedColor = 15844367
+        embedColor = 1700255
         contentMsg = "@everyone"
 
         local fishName = data.Item or "Unknown"
         local mutation = data.Mutation or "None"
         local weight = data.Weight or "N/A"
-        local sellPrice = data.SellPrice or "440,000"
+        local sellPrice = data.SellPrice or "Unknown"
         local currentCoins = "0"
 
         -- Get current coins from leaderstats
