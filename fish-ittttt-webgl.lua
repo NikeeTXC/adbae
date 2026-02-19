@@ -97,6 +97,59 @@ local SecretList = {
 
 local StoneList = { "Ruby" }
 
+local SecretFishPrices = {
+    ["Crystal Crab"] = "250,000",
+    ["Orca"] = "300,000",
+    ["Zombie Shark"] = "350,000",
+    ["Zombie Megalodon"] = "500,000",
+    ["Dead Zombie Shark"] = "400,000",
+    ["Blob Shark"] = "200,000",
+    ["Ghost Shark"] = "350,000",
+    ["Skeleton Narwhal"] = "300,000",
+    ["Ghost Worm Fish"] = "250,000",
+    ["Worm Fish"] = "150,000",
+    ["Megalodon"] = "400,000",
+    ["1x1x1x1 Comet Shark"] = "1,000,000",
+    ["Bloodmoon Whale"] = "450,000",
+    ["Lochness Monster"] = "400,000",
+    ["Monster Shark"] = "350,000",
+    ["Eerie Shark"] = "300,000",
+    ["Great Whale"] = "350,000",
+    ["Frostborn Shark"] = "300,000",
+    ["Armored Shark"] = "280,000",
+    ["Scare"] = "250,000",
+    ["Queen Crab"] = "300,000",
+    ["King Crab"] = "400,000",
+    ["Cryoshade Glider"] = "320,000",
+    ["Panther Eel"] = "280,000",
+    ["Giant Squid"] = "350,000",
+    ["Depthseeker Ray"] = "300,000",
+    ["Robot Kraken"] = "500,000",
+    ["Mosasaur Shark"] = "450,000",
+    ["King Jelly"] = "380,000",
+    ["Bone Whale"] = "400,000",
+    ["Elshark Gran Maja"] = "420,000",
+    ["Elpirate Gran Maja"] = "440,000",
+    ["Ancient Whale"] = "450,000",
+    ["Gladiator Shark"] = "400,000",
+    ["Ancient Lochness Monster"] = "500,000",
+    ["Talon Serpent"] = "380,000",
+    ["Hacker Shark"] = "450,000",
+    ["ElRetro Gran Maja"] = "430,000",
+    ["Strawberry Choc Megalodon"] = "480,000",
+    ["Krampus Shark"] = "450,000",
+    ["Emerald Winter Whale"] = "500,000",
+    ["Winter Frost Shark"] = "420,000",
+    ["Icebreaker Whale"] = "460,000",
+    ["Leviathan"] = "600,000",
+    ["Pirate Megalodon"] = "480,000",
+    ["Viridis Lurker"] = "400,000",
+    ["Cursed Kraken"] = "550,000",
+    ["Ancient Magma Whale"] = "520,000",
+    ["Rainbow Comet Shark"] = "550,000",
+    ["Love Nessie"] = "480,000",
+}
+
 local function TeleportToLookAt(position, lookVector)
     local Character = Players.LocalPlayer.Character
     if not Character then Character = Players.LocalPlayer.CharacterAdded:Wait() end
@@ -2418,7 +2471,15 @@ local function ParseDataSmart(cleanMsg)
                 break
             end
         end
-        return { Player = p, Item = finalItem, Mutation = mutation, Weight = w }
+        -- Get sell price from SecretFishPrices table
+        local sellPrice = "440,000"
+        for fishName, price in pairs(SecretFishPrices) do
+            if string.find(string.lower(finalItem), string.lower(fishName)) then
+                sellPrice = price
+                break
+            end
+        end
+        return { Player = p, Item = finalItem, Mutation = mutation, Weight = w, SellPrice = sellPrice }
     end
     return nil
 end
@@ -2437,14 +2498,38 @@ local function SendWebhook(data, category)
     if discordId and discordId ~= "" then if category == "LEAVE" then contentMsg = "User Left: <@" .. discordId .. ">" else contentMsg = "GG! <@" .. discordId .. ">" end end
     if category == "LEAVE" then TargetURL = Current_Webhook_Leave elseif category == "PLAYERS" then TargetURL = Current_Webhook_List else TargetURL = Current_Webhook_Fish end
     if not TargetURL or TargetURL == "" or string.find(TargetURL, "MASUKKAN_URL") then return end
-    local embedTitle = ""; local embedColor = 3447003; local descriptionText = "" 
-    local pName = Settings.SpoilerName and ("||`" .. data.Player .. "`||") or ("`" .. data.Player .. "`") 
+    local embedTitle = ""; local embedColor = 3447003; local descriptionText = ""
+    local pName = Settings.SpoilerName and ("||`" .. data.Player .. "`||") or ("`" .. data.Player .. "`")
     if category == "SECRET" then
         SessionStats.Secret = SessionStats.Secret + 1
         embedTitle = "🎣 New Fish Caught!"
-        embedColor = 3447003; local lines = { "⚓ Fish: " .. data.Item }
-        if data.Mutation and data.Mutation ~= "None" then table.insert(lines, "🧬 Mutation: " .. data.Mutation) end
-        table.insert(lines, "⚖️ Weight: " .. data.Weight); descriptionText = "Player: " .. pName .. "\n\n```\n" .. table.concat(lines, "\n") .. "\n```"
+        embedColor = 15844367
+        contentMsg = "@everyone"
+
+        local fishName = data.Item or "Unknown"
+        local mutation = data.Mutation or "None"
+        local weight = data.Weight or "N/A"
+        local sellPrice = data.SellPrice or "440,000"
+        local currentCoins = "0"
+
+        -- Get current coins from leaderstats
+        pcall(function()
+            local player = Players.LocalPlayer
+            if player then
+                local leaderstats = player:FindFirstChild("leaderstats")
+                if leaderstats then
+                    local coinsStat = leaderstats:FindFirstChild("Coins") or leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money")
+                    if coinsStat then
+                        currentCoins = string.format("%d", coinsStat.Value):gsub("(%d)(%d%d%d)$", "%1,%2")
+                    end
+                end
+            end
+        end)
+
+        descriptionText = "**User**\n" .. pName .. "\n\n**Fish Name**\n" .. fishName .. "\n\n**Rarity** ⋅ **Tier** ⋅ **Weight**\nSECRET ⋅ 7 ⋅ " .. weight .. "\n\n**Mutation** ⋅ **Sell Price**\n" .. mutation .. " ⋅ " .. sellPrice .. " Coins"
+
+        local currentTime = os.date("%d %B %Y, %H:%M:%S")
+        descriptionText = descriptionText .. "\n\nCurrent Coins: " .. currentCoins .. " | " .. currentTime
     elseif category == "STONE" then
         SessionStats.Ruby = SessionStats.Ruby + 1
         embedTitle = "Ruby Gemstone!"
@@ -2481,8 +2566,15 @@ local function SendWebhook(data, category)
     if UI_StatsLabels["Evolved"] then UI_StatsLabels["Evolved"].Text = tostring(SessionStats.Evolved) end
     if UI_StatsLabels["Crystalized"] then UI_StatsLabels["Crystalized"].Text = tostring(SessionStats.Crystalized) end
     if UI_StatsLabels["CaveCrystal"] then UI_StatsLabels["CaveCrystal"].Text = tostring(SessionStats.CaveCrystal) end
-    
-    local embedData = { ["username"] = "NikeeHUB", ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg", ["content"] = contentMsg, ["embeds"] = {{ ["title"] = embedTitle, ["description"] = descriptionText, ["color"] = embedColor, ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" } }} }
+
+    local embedTable = { ["title"] = embedTitle, ["description"] = descriptionText, ["color"] = embedColor, ["footer"] = { ["text"] = "NikeeHUB Webhook", ["icon_url"] = "https://i.imgur.com/CWWGnhO.jpeg" } }
+
+    if category == "SECRET" then
+        embedTable["thumbnail"] = { ["url"] = "https://i.imgur.com/CWWGnhO.jpeg" }
+        embedTable["footer"] = { ["text"] = "NikeeHUB Webhook" }
+    end
+
+    local embedData = { ["username"] = "NikeeHUB", ["avatar_url"] = "https://i.imgur.com/CWWGnhO.jpeg", ["content"] = contentMsg, ["embeds"] = {embedTable} }
     pcall(function() httpRequest({ Url = TargetURL, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = HttpService:JSONEncode(embedData) }) end)
 end
 
@@ -2567,7 +2659,7 @@ if TextChatService then
         if not ScriptActive then return end
         if m.TextSource == nil then
             local channel = m.TextChannel
-            if channel and (channel.Name == "RBXGeneral" or channel.Name == "General") then
+            if channel and (channel.Name == "RBXGlobal" or channel.Name == "Global Alerts") then
                 CheckAndSend(m.Text)
             end
         end
