@@ -926,16 +926,6 @@ end
 
 local function IF_FishingLoop()
     while IF.Enabled and ScriptActive do
-        -- Auto Equip Rod (integrated from NikeeHUB.lua)
-        if Settings.AutoEquipRodEnabled then
-            pcall(function()
-                local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
-                if RE_Equip then
-                    RE_Equip:FireServer(1)
-                end
-            end)
-        end
-        
         -- Cancel
         pcall(function() IF.Remotes.Cancel:InvokeServer() end)
         -- Charge
@@ -979,92 +969,57 @@ task.spawn(function()
     end
 end)
 
--- Auto Equip Rod - Continuous Monitor (seperti NikeeHUB.lua)
-local function GetEquippedTool()
-    local char = Players.LocalPlayer.Character
-    if char then
-        -- Method 1: FindFirstChildOfClass
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then return tool end
-        
-        -- Method 2: Check common tool names in Fish It
-        for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("Tool") or (child.Name:lower():find("rod") or child.Name:lower():find("fish")) then
-                return child
-            end
-        end
-    end
-    return nil
-end
-
-local function IsHoldingFish(tool)
-    if not tool then return false end
-    local name = tool.Name:lower()
-    return name:find("fish") ~= nil
-end
-
-local function IsHoldingRod(tool)
-    if not tool then return false end
-    local name = tool.Name:lower()
-    return name:find("rod") ~= nil or name:find("fishing") ~= nil
-end
-
-local AutoEquipDebug = true -- Set true untuk debug notification
+-- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
+local AutoEquipRodLastEquipTime = 0
+local AutoEquipRodCooldown = 0.3
+local AutoEquipDebug = true -- Debug mode
 
 task.spawn(function()
     local lastEquipTime = 0
-    local equipCooldown = 0.5
-    local lastToolName = ""
+    local equipCooldown = 0.3
     
     while ScriptActive do
+        task.wait(0.15)
+        
         if Settings.AutoEquipRodEnabled then
-            local tool = GetEquippedTool()
-            local now = tick()
-            
-            -- Equip rod jika: tidak memegang tool, atau memegang ikan (bukan rod)
-            local shouldEquip = false
-            local reason = ""
-            
-            if not tool then
-                -- Tidak memegang apapun
-                shouldEquip = true
-                reason = "No tool"
-            elseif IsHoldingFish(tool) then
-                -- Memegang ikan
-                shouldEquip = true
-                reason = "Fish: " .. tool.Name
-            elseif not IsHoldingRod(tool) then
-                -- Memegang sesuatu yang bukan rod
-                shouldEquip = true
-                reason = "Not rod: " .. tool.Name
-            end
-            
-            if shouldEquip and now - lastEquipTime > equipCooldown then
-                local success = pcall(function()
-                    local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
-                    if RE_Equip then
-                        RE_Equip:FireServer(1)
-                        lastEquipTime = now
-                        if AutoEquipDebug then
-                            ShowNotification("🎣 " .. reason, false)
+            local currentChar = Players.LocalPlayer.Character
+            if currentChar then
+                local humanoid = currentChar:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    local equippedTool = humanoid:FindFirstChildOfClass("Tool")
+                    local shouldEquipRod = false
+                    
+                    if equippedTool then
+                        local toolName = equippedTool.Name
+                        -- Check if it's NOT a fishing rod
+                        if not string.find(toolName:lower(), "rod") then
+                            shouldEquipRod = true
+                        end
+                    else
+                        -- No tool equipped
+                        shouldEquipRod = true
+                    end
+                    
+                    -- Equip rod with cooldown check
+                    if shouldEquipRod and (tick() - lastEquipTime) > equipCooldown then
+                        local success = pcall(function()
+                            local EquipRemote = GetRemote("RE/EquipToolFromHotbar")
+                            if EquipRemote then
+                                EquipRemote:FireServer(1)
+                                lastEquipTime = tick()
+                                if AutoEquipDebug then
+                                    ShowNotification("🎣 Equipped: " .. (equippedTool and equippedTool.Name or "None"), false)
+                                end
+                            end
+                        end)
+                        
+                        if success then
+                            task.wait(0.1)
                         end
                     end
-                end)
-            end
-            
-            if tool and tool.Name ~= lastToolName then
-                lastToolName = tool.Name
-                if AutoEquipDebug then
-                    print("[AutoEquip] Current tool:", tool.Name)
-                end
-            elseif not tool and lastToolName ~= "" then
-                lastToolName = ""
-                if AutoEquipDebug then
-                    print("[AutoEquip] No tool")
                 end
             end
         end
-        task.wait(0.15)
     end
 end)
 
