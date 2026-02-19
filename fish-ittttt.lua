@@ -1475,25 +1475,34 @@ local function RefreshConfigList()
 end
 
 local function LoadConfig(configName)
+    print("[LoadConfig] Starting load:", configName)
+    
     local success, content = pcall(function() return readfile("Nikee_Configs/" .. configName .. ".json") end)
-    if not success then ShowNotification("Read Failed!", true) return false end
+    if not success then 
+        print("[LoadConfig] ✗ Read failed")
+        ShowNotification("Read Failed!", true) 
+        return false 
+    end
 
     local decodeSuccess, data = pcall(function() return HttpService:JSONDecode(content) end)
-    
+
     if decodeSuccess and data then
+        print("[LoadConfig] ✓ JSON decoded")
+        
         if data.Webhooks then
             Current_Webhook_Fish = data.Webhooks.Fish or ""
             Current_Webhook_Leave = data.Webhooks.Leave or ""
             Current_Webhook_List = data.Webhooks.List or ""
-            
+
             if UI_FishInput then UI_FishInput.Text = Current_Webhook_Fish end
             if UI_LeaveInput then UI_LeaveInput.Text = Current_Webhook_Leave end
             if UI_ListInput then UI_ListInput.Text = Current_Webhook_List end
-            
+
             Current_Webhook_Admin = data.Webhooks.Admin or ""
             if UI_AdminInput then UI_AdminInput.Text = Current_Webhook_Admin end
+            print("[LoadConfig] ✓ Webhooks loaded")
         end
-                
+
         if data.Players then
             TagList = data.Players
             for i = 1, 20 do
@@ -1507,33 +1516,59 @@ local function LoadConfig(configName)
                     end
                 end
             end
+            print("[LoadConfig] ✓ Players loaded")
         end
 
         if data.Settings then
+            print("[LoadConfig] Loading settings...")
+            local loadedCount = 0
             for k, v in pairs(data.Settings) do
                 if Settings[k] ~= nil then
                     Settings[k] = v
+                    print("[LoadConfig]   Set", k, "=", v)
                     if ToggleRegistry[k] then
                         ToggleRegistry[k](v)
+                        print("[LoadConfig]   ✓ ToggleRegistry called for", k)
+                        loadedCount = loadedCount + 1
+                    else
+                        print("[LoadConfig]   ⚠ No ToggleRegistry for", k)
                     end
+                else
+                    print("[LoadConfig]   ⚠ Unknown setting:", k)
                 end
             end
-            
+            print("[LoadConfig] ✓ Settings loaded:", loadedCount, "toggles updated")
+
             -- Update input fields
-            if UI_CompleteDelayInput then UI_CompleteDelayInput.Text = tostring(Settings.InstantFishingCompleteDelay or "0.7") end
-            if UI_CastDelayInput then UI_CastDelayInput.Text = tostring(Settings.InstantFishingCastDelay or "0.1") end
-            if UI_ClaimAmountInput then UI_ClaimAmountInput.Text = tostring(Settings.InstantFishingClaimAmount or "3") end
-            if UI_AutoSellThresholdInput then UI_AutoSellThresholdInput.Text = tostring(Settings.AutoSellThreshold or "600") end
-            
+            if UI_CompleteDelayInput then 
+                UI_CompleteDelayInput.Text = tostring(Settings.InstantFishingCompleteDelay or "0.7") 
+                print("[LoadConfig] ✓ CompleteDelay input updated")
+            end
+            if UI_CastDelayInput then 
+                UI_CastDelayInput.Text = tostring(Settings.InstantFishingCastDelay or "0.1") 
+                print("[LoadConfig] ✓ CastDelay input updated")
+            end
+            if UI_ClaimAmountInput then 
+                UI_ClaimAmountInput.Text = tostring(Settings.InstantFishingClaimAmount or "3") 
+                print("[LoadConfig] ✓ ClaimAmount input updated")
+            end
+            if UI_AutoSellThresholdInput then 
+                UI_AutoSellThresholdInput.Text = tostring(Settings.AutoSellThreshold or "600") 
+                print("[LoadConfig] ✓ AutoSellThreshold input updated")
+            end
+
             -- Update Selected Totem
             if Settings.SelectedTotem then
                 SelectedTotem = Settings.SelectedTotem
+                print("[LoadConfig] ✓ SelectedTotem updated:", SelectedTotem)
             end
         end
 
         ShowNotification("Config Loaded!", false)
+        print("[LoadConfig] ✓✓✓ CONFIG LOAD COMPLETE ✓✓✓")
         return true
     else
+        print("[LoadConfig] ✗ JSON decode failed")
         ShowNotification("JSON Error!", true)
         return false
     end
@@ -1615,161 +1650,17 @@ DeleteBtn.MouseButton1Click:Connect(function()
     RefreshConfigList()
 end)
 
-local AutoLoadToggle = nil
-local AutoLoadConfigPath = "Nikee_Configs/autoload.json"
-local currentAutoLoad = nil
-
--- Get executor working directory
-local function GetExecutorPath()
-    -- Try common executor path functions
-    if getexecutorpath then
-        return getexecutorpath()
-    elseif getfenv and getfenv().getexecutorpath then
-        return getfenv().getexecutorpath()
-    end
-    return nil
-end
-
-local function SaveAutoLoadPref(configName, enabled)
-    local data = { config = configName, enabled = enabled }
-    local json = HttpService:JSONEncode(data)
-    local success, err = pcall(function()
-        writefile(AutoLoadConfigPath, json)
-    end)
-    if success then
-        currentAutoLoad = enabled and configName or nil
-        print("[AutoLoad] ✓ Saved:", configName, "Enabled:", enabled)
-        print("[AutoLoad] ✓ Path:", AutoLoadConfigPath)
-        
-        -- Also try to save in executor root if different
-        local execPath = GetExecutorPath()
-        if execPath and execPath ~= "" then
-            pcall(function()
-                writefile(execPath .. "/Nikee_Configs/autoload.json", json)
-                print("[AutoLoad] ✓ Also saved to executor path")
-            end)
-        end
-    else
-        print("[AutoLoad] ✗ Save failed:", err)
-    end
-end
-
-local function GetAutoLoadPref()
-    -- Try to read from default path first
-    local exists = isfile(AutoLoadConfigPath)
-    if exists then
-        local s, c = pcall(function() return readfile(AutoLoadConfigPath) end)
-        if s then
-            local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
-            if s2 and d then 
-                print("[AutoLoad] ✓ Loaded from default path | Config:", d.config, "| Enabled:", d.enabled)
-                return d 
-            end
-        end
-    end
-    
-    -- Try executor path if available
-    local execPath = GetExecutorPath()
-    if execPath and execPath ~= "" then
-        local execAutoLoadPath = execPath .. "/Nikee_Configs/autoload.json"
-        local execExists = isfile(execAutoLoadPath)
-        if execExists then
-            local s, c = pcall(function() return readfile(execAutoLoadPath) end)
-            if s then
-                local s2, d = pcall(function() return HttpService:JSONDecode(c) end)
-                if s2 and d then 
-                    print("[AutoLoad] ✓ Loaded from executor path | Config:", d.config, "| Enabled:", d.enabled)
-                    return d 
-                end
-            end
-        end
-    end
-    
-    print("[AutoLoad] No autoload file found")
-    return nil
-end
-
 local AutoLoadWrapper = Instance.new("Frame", Page_Save)
 AutoLoadWrapper.BackgroundTransparency = 1; AutoLoadWrapper.Size = UDim2.new(1, -5, 0, 30)
 AutoLoadWrapper.LayoutOrder = 5
 
-local AutoLoadBtn = Instance.new("TextButton", AutoLoadWrapper)
-AutoLoadBtn.BackgroundColor3 = Theme.Input
-AutoLoadBtn.Size = UDim2.new(0.48, 0, 1, 0)
-AutoLoadBtn.Font = Enum.Font.GothamBold
-AutoLoadBtn.Text = "SET AS AUTOLOAD"
-AutoLoadBtn.TextColor3 = Theme.TextSecondary
-AutoLoadBtn.TextSize = 11
-Instance.new("UICorner", AutoLoadBtn).CornerRadius = UDim.new(0, 6)
-AddStroke(AutoLoadBtn, Theme.Border, 1)
-
-local ClearAutoLoadBtn = Instance.new("TextButton", AutoLoadWrapper)
-ClearAutoLoadBtn.BackgroundColor3 = Theme.Error
-ClearAutoLoadBtn.Position = UDim2.new(0.52, 0, 0, 0)
-ClearAutoLoadBtn.Size = UDim2.new(0.48, 0, 1, 0)
-ClearAutoLoadBtn.Font = Enum.Font.GothamBold
-ClearAutoLoadBtn.Text = "CLEAR AUTOLOAD"
-ClearAutoLoadBtn.TextColor3 = Color3.new(1, 1, 1)
-ClearAutoLoadBtn.TextSize = 11
-Instance.new("UICorner", ClearAutoLoadBtn).CornerRadius = UDim.new(0, 6)
-AddStroke(ClearAutoLoadBtn, Theme.Border, 1)
-
-local function UpdateAutoLoadBtnState()
-    local pref = GetAutoLoadPref()
-    if pref and pref.enabled and pref.config then
-        AutoLoadBtn.BackgroundColor3 = Theme.Success
-        AutoLoadBtn.TextColor3 = Color3.new(1,1,1)
-        AutoLoadBtn.Text = "AUTOLOAD: " .. pref.config
-        ClearAutoLoadBtn.BackgroundColor3 = Theme.Error
-        ClearAutoLoadBtn.TextColor3 = Color3.new(1,1,1)
-        ClearAutoLoadBtn.Text = "CLEAR AUTOLOAD"
-    else
-        AutoLoadBtn.BackgroundColor3 = Theme.Input
-        AutoLoadBtn.TextColor3 = Theme.TextSecondary
-        AutoLoadBtn.Text = "SET AS AUTOLOAD"
-        ClearAutoLoadBtn.BackgroundColor3 = Theme.Input
-        ClearAutoLoadBtn.TextColor3 = Theme.TextSecondary
-        ClearAutoLoadBtn.Text = "NO AUTOLOAD"
-    end
-end
-
-AutoLoadBtn.MouseButton1Click:Connect(function()
-    if not selectedConfig then ShowNotification("Select a config first!", true) return end
-
-    SaveAutoLoadPref(selectedConfig, true)
-    ShowNotification("Autoload Set: " .. selectedConfig, false)
-    UpdateAutoLoadBtnState()
-end)
-
-ClearAutoLoadBtn.MouseButton1Click:Connect(function()
-    local pref = GetAutoLoadPref()
-    if not pref or not pref.enabled then 
-        ShowNotification("No Autoload Active!", true) 
-        return 
-    end
-    
-    local success = pcall(function()
-        if isfile(AutoLoadConfigPath) then
-            delfile(AutoLoadConfigPath)
-        end
-    end)
-    
-    -- Also try to delete from executor path
-    local execPath = GetExecutorPath()
-    if execPath and execPath ~= "" then
-        pcall(function()
-            local execAutoLoadPath = execPath .. "/Nikee_Configs/autoload.json"
-            if isfile(execAutoLoadPath) then
-                delfile(execAutoLoadPath)
-            end
-        end)
-    end
-    
-    currentAutoLoad = nil
-    ShowNotification("Autoload Cleared!", false)
-    UpdateAutoLoadBtnState()
-    print("[AutoLoad] ✓ Autoload cleared")
-end)
+local AutoLoadLabel = Instance.new("TextLabel", AutoLoadWrapper)
+AutoLoadLabel.BackgroundTransparency = 1
+AutoLoadLabel.Size = UDim2.new(1, 0, 1, 0)
+AutoLoadLabel.Font = Enum.Font.GothamBold
+AutoLoadLabel.Text = "AutoLoad Removed"
+AutoLoadLabel.TextColor3 = Theme.TextSecondary
+AutoLoadLabel.TextSize = 11
 
 local originalRefresh = RefreshConfigList
 RefreshConfigList = function()
@@ -1778,24 +1669,23 @@ RefreshConfigList = function()
     end
     selectedConfig = nil
     LoadBtn.BackgroundColor3 = Theme.Input
-    UpdateAutoLoadBtnState()
-    
+
     local success, files = pcall(function() return listfiles("Nikee_Configs") end)
     if not success or not files then files = {} end
 
     for _, file in pairs(files) do
         local name = file:match("([^/\\]+)$") or file
-        
-        if name ~= "autoload.json" then 
+
+        if name ~= "autoload.json" then
             name = name:gsub("%.json$", "")
-            
+
             local Btn = Instance.new("TextButton", ConfigList)
             Btn.BackgroundColor3 = Theme.Background
             Btn.Size = UDim2.new(1, -8, 0, 24); Btn.Font = Enum.Font.GothamMedium
             Btn.Text = "  " .. name; Btn.TextColor3 = Theme.TextSecondary
             Btn.TextSize = 11; Btn.TextXAlignment = "Left"
             Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
-            
+
             Btn.MouseButton1Click:Connect(function()
                 for _, b in pairs(ConfigList:GetChildren()) do
                     if b:IsA("TextButton") then b.BackgroundColor3 = Theme.Background; b.TextColor3 = Theme.TextSecondary end
@@ -1803,8 +1693,7 @@ RefreshConfigList = function()
                 Btn.BackgroundColor3 = Theme.Accent
                 Btn.TextColor3 = Color3.new(1, 1, 1)
                 selectedConfig = name
-                LoadBtn.BackgroundColor3 = Theme.Success 
-                UpdateAutoLoadBtnState()
+                LoadBtn.BackgroundColor3 = Theme.Success
             end)
         end
     end
@@ -2782,33 +2671,3 @@ end
 task.spawn(StartInventoryWatcher)
 
 print("✅ NikeeHUB System Session v1.0 Loaded!")
-
-task.delay(2, function()
-    print("[AutoLoad] === Starting autoload check ===")
-    
-    local autoPref = GetAutoLoadPref()
-    print("[AutoLoad] Pref result:", autoPref)
-    
-    if autoPref and autoPref.enabled and autoPref.config and autoPref.config ~= "" then
-        print("🔄 Autoloading Config: " .. autoPref.config)
-        
-        -- Check if config file exists
-        local configPath = "Nikee_Configs/" .. autoPref.config .. ".json"
-        local configExists = pcall(function() return isfile(configPath) end)
-        print("[AutoLoad] Config file exists:", configExists, "Path:", configPath)
-        
-        if configExists then
-            local success = LoadConfig(autoPref.config)
-            print("[AutoLoad] Load result:", success)
-            if success then
-                ShowNotification("AutoLoaded: " .. autoPref.config, false)
-            end
-        else
-            print("[AutoLoad] Config file not found!")
-            ShowNotification("Autoload file missing!", true)
-        end
-    else
-        print("[AutoLoad] No autoload config set or enabled")
-    end
-    print("[AutoLoad] === Autoload check done ===")
-end)
