@@ -170,6 +170,9 @@ local Settings = {
     AutoTotemEnabled = false,
     SelectedTotem = "Luck Totem",
 
+    -- Auto Equip Rod Settings
+    AutoEquipRodEnabled = false,
+
     -- Detector Stuck Settings
     DetectorStuckEnabled = false,
     StuckThreshold = 15,
@@ -901,75 +904,6 @@ local function getFishCount()
     return 0
 end
 
-local DetectorStuckEnabled = false
-local StuckThreshold = 15
-local LastFishCount = 0
-local StuckTimer = 0
-local SavedCFrame = nil
-
-CreateToggle(Page_Fhising, "Detector Stuck (15s)", "DetectorStuckEnabled", function(state)
-    Settings.DetectorStuckEnabled = state
-    DetectorStuckEnabled = state
-    if state then
-        LastFishCount = getFishCount()
-        StuckTimer = 0
-        local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-        SavedCFrame = char:WaitForChild("HumanoidRootPart").CFrame
-        
-        task.spawn(function()
-            while DetectorStuckEnabled and ScriptActive do
-                task.wait(1)
-                local currentFish = getFishCount()
-                if currentFish == LastFishCount then
-                    StuckTimer = StuckTimer + 1
-                    if StuckTimer >= StuckThreshold then
-                         ShowNotification("Stuck Detected! Resetting...", true)
-                         
-                         local char = Players.LocalPlayer.Character
-                         if char and char:FindFirstChild("HumanoidRootPart") then
-                            SavedCFrame = char.HumanoidRootPart.CFrame
-                         end
-                         
-                         if char then char:BreakJoints() end
-                         
-                         local newChar = Players.LocalPlayer.CharacterAdded:Wait()
-                         local hrp = newChar:WaitForChild("HumanoidRootPart")
-                         task.wait(0.5)
-                         hrp.CFrame = SavedCFrame
-                         
-                         StuckTimer = 0
-                         LastFishCount = getFishCount()
-                         
-                         local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
-                         if RE_Equip then pcall(function() RE_Equip:FireServer(1) end) end
-                    end
-                else
-                    LastFishCount = currentFish
-                    StuckTimer = 0
-                end
-            end
-        end)
-    end
-end)
-
-local AutoShakeEnabled = false
-CreateToggle(Page_Fhising, "Auto Click Fishing", "AutoClickFishingEnabled", function(val)
-    AutoShakeEnabled = val
-    Settings.AutoClickFishingEnabled = val
-    local clickEffect = Players.LocalPlayer.PlayerGui:FindFirstChild("!!! Click Effect")
-    if AutoShakeEnabled then
-        if clickEffect then clickEffect.Enabled = false end
-        task.spawn(function()
-            while AutoShakeEnabled and ScriptActive do
-                pcall(function() FishingController:RequestFishingMinigameClick() end)
-                task.wait(0.1)
-            end
-        end)
-    elseif clickEffect then
-        clickEffect.Enabled = true
-    end
-end)
-
 -- Instant Fishing (NikeeHUB.lua Pattern - No Delay)
 local IF={Remotes={Charge=nil,Request=nil,Cancel=nil,Claim=nil},Initialized=false,Enabled=false}
 
@@ -1035,6 +969,82 @@ task.spawn(function()
     end
 end)
 
+-- Auto Equip Rod Logic
+local AutoEquipRodEnabled = false
+local RE_EquipTool = nil
+
+local function AutoEquipRod_Init()
+    if RE_EquipTool then return true end
+    local s, r = pcall(function()
+        local np = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
+        if np then
+            RE_EquipTool = np:WaitForChild("RE/EquipToolFromHotbar", 3)
+            return RE_EquipTool ~= nil
+        end
+        return false
+    end)
+    return s and r
+end
+
+local function AutoEquipRod_Equip()
+    if not AutoEquipRodEnabled then return end
+    if not AutoEquipRod_Init() then
+        ShowNotification("Equip Remote Missing!", true)
+        return
+    end
+    
+    pcall(function()
+        RE_EquipTool:FireServer(1)
+    end)
+end
+
+-- Monitor Auto Equip Rod
+task.spawn(function()
+    while ScriptActive do
+        if Settings.AutoEquipRodEnabled and not AutoEquipRodEnabled then
+            AutoEquipRodEnabled = true
+            if AutoEquipRod_Init() then
+                AutoEquipRod_Equip()
+                ShowNotification("Auto Equip Rod Enabled", false)
+            else
+                Settings.AutoEquipRodEnabled = false
+                AutoEquipRodEnabled = false
+            end
+        elseif not Settings.AutoEquipRodEnabled and AutoEquipRodEnabled then
+            AutoEquipRodEnabled = false
+            ShowNotification("Auto Equip Rod Disabled", false)
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Auto Equip Rod UI Section (Moved to Top)
+do
+    local lbl = Instance.new("TextLabel", Page_Fhising)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "🎣 Auto Equip Rod"
+    lbl.TextColor3 = Theme.Accent
+    lbl.TextSize = 12
+    lbl.TextXAlignment = "Left"
+end
+
+CreateToggle(Page_Fhising, "Enable Auto Equip Rod", "AutoEquipRodEnabled", function(state)
+    Settings.AutoEquipRodEnabled = state
+    if state then
+        if not AutoEquipRod_Init() then
+            ShowNotification("Equip Remote Missing!", true)
+            Settings.AutoEquipRodEnabled = false
+            return
+        end
+        AutoEquipRodEnabled = true
+        AutoEquipRod_Equip()
+    else
+        AutoEquipRodEnabled = false
+    end
+end)
+
 -- Instant Fishing UI Section
 do
     local lbl = Instance.new("TextLabel", Page_Fhising)
@@ -1084,6 +1094,87 @@ UI_ClaimAmountInput = CreateInput(Page_Fhising, "Claim Amount", tostring(Setting
     if val then
         Settings.InstantFishingClaimAmount = math.floor(val)
         ShowNotification("Claim Amount set to " .. Settings.InstantFishingClaimAmount, false)
+    end
+end)
+
+-- Detector Stuck & Auto Click Fishing Section
+do
+    local lbl = Instance.new("TextLabel", Page_Fhising)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "🔧 Fishing Utilities"
+    lbl.TextColor3 = Theme.Accent
+    lbl.TextSize = 12
+    lbl.TextXAlignment = "Left"
+end
+
+local DetectorStuckEnabled = false
+local StuckThreshold = 15
+local LastFishCount = 0
+local StuckTimer = 0
+local SavedCFrame = nil
+
+CreateToggle(Page_Fhising, "Detector Stuck (15s)", "DetectorStuckEnabled", function(state)
+    Settings.DetectorStuckEnabled = state
+    DetectorStuckEnabled = state
+    if state then
+        LastFishCount = getFishCount()
+        StuckTimer = 0
+        local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+        SavedCFrame = char:WaitForChild("HumanoidRootPart").CFrame
+
+        task.spawn(function()
+            while DetectorStuckEnabled and ScriptActive do
+                task.wait(1)
+                local currentFish = getFishCount()
+                if currentFish == LastFishCount then
+                    StuckTimer = StuckTimer + 1
+                    if StuckTimer >= StuckThreshold then
+                         ShowNotification("Stuck Detected! Resetting...", true)
+
+                         local char = Players.LocalPlayer.Character
+                         if char and char:FindFirstChild("HumanoidRootPart") then
+                            SavedCFrame = char.HumanoidRootPart.CFrame
+                         end
+
+                         if char then char:BreakJoints() end
+
+                         local newChar = Players.LocalPlayer.CharacterAdded:Wait()
+                         local hrp = newChar:WaitForChild("HumanoidRootPart")
+                         task.wait(0.5)
+                         hrp.CFrame = SavedCFrame
+
+                         StuckTimer = 0
+                         LastFishCount = getFishCount()
+
+                         local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
+                         if RE_Equip then pcall(function() RE_Equip:FireServer(1) end) end
+                    end
+                else
+                    LastFishCount = currentFish
+                    StuckTimer = 0
+                end
+            end
+        end)
+    end
+end)
+
+local AutoShakeEnabled = false
+CreateToggle(Page_Fhising, "Auto Click Fishing", "AutoClickFishingEnabled", function(val)
+    AutoShakeEnabled = val
+    Settings.AutoClickFishingEnabled = val
+    local clickEffect = Players.LocalPlayer.PlayerGui:FindFirstChild("!!! Click Effect")
+    if AutoShakeEnabled then
+        if clickEffect then clickEffect.Enabled = false end
+        task.spawn(function()
+            while AutoShakeEnabled and ScriptActive do
+                pcall(function() FishingController:RequestFishingMinigameClick() end)
+                task.wait(0.1)
+            end
+        end)
+    elseif clickEffect then
+        clickEffect.Enabled = true
     end
 end)
 
