@@ -971,11 +971,11 @@ end)
 
 -- Auto Equip Rod - Continuous Monitor (EXACT copy dari NikeeHUB.lua)
 local AutoEquipRodLastEquipTime = 0
-local AutoEquipRodCooldown = 0.8 -- Delay lebih lama agar tidak terlalu cepat
+local AutoEquipRodCooldown = 3 -- Delay 3 detik
 
 task.spawn(function()
     local lastEquipTime = 0
-    local equipCooldown = 0.8 -- Delay 0.8 detik (tidak terlalu cepat)
+    local equipCooldown = 3 -- Delay 3 detik (lebih lama, tidak spam)
     
     while ScriptActive do
         task.wait(0.15)
@@ -1001,18 +1001,13 @@ task.spawn(function()
                     
                     -- Equip rod with cooldown check
                     if shouldEquipRod and (tick() - lastEquipTime) > equipCooldown then
-                        local success = pcall(function()
+                        pcall(function()
                             local EquipRemote = GetRemote("RE/EquipToolFromHotbar")
                             if EquipRemote then
                                 EquipRemote:FireServer(1)
                                 lastEquipTime = tick()
-                                -- Debug notification dihapus
                             end
                         end)
-                        
-                        if success then
-                            task.wait(0.1)
-                        end
                     end
                 end
             end
