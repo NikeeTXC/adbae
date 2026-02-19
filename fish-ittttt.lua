@@ -1086,20 +1086,14 @@ CreateToggle(Page_Fhising, "Auto Sell", false, function(state)
     if state then
         local RF_Sell = GetRemote("RF/SellAllItems")
         if not RF_Sell then ShowNotification("Remote Sell Missing!", true) AutoSellEnabled = false return end
-        
-        -- Debug: show current fish count
-        local initialFish = getFishCount()
-        ShowNotification("Auto Sell ON | Fish: " .. initialFish .. "/" .. Settings.AutoSellThreshold, false)
 
         task.spawn(function()
             local lastSellCount = 0
             while AutoSellEnabled and ScriptActive do
                 local currentFish = getFishCount()
-                print("[AutoSell] Fish Count:", currentFish, "Threshold:", Settings.AutoSellThreshold)
                 if currentFish >= Settings.AutoSellThreshold and currentFish ~= lastSellCount and currentFish > 0 then
                     pcall(function() RF_Sell:InvokeServer() end)
                     ShowNotification("Auto Sold " .. currentFish .. " fish!", false)
-                    print("[AutoSell] Sold at count:", currentFish)
                     lastSellCount = currentFish
                     task.wait(3)
                 end
