@@ -237,7 +237,10 @@ local Settings = {
     WalkOnWaterEnabled = false,
 
     -- Favorite By Mutasi Settings
-    FavoriteByMutationEnabled = false
+    FavoriteByMutationEnabled = false,
+
+    -- Favorite By Name Settings
+    FavoriteByNameEnabled = false
 }
 
 task.spawn(function()
@@ -1726,7 +1729,7 @@ SaveBtn.MouseButton1Click:Connect(function()
         "InstantFishingCastDelay", "InstantFishingClaimAmount", "AutoSellThreshold",
         "AutoSellEnabled", "AutoWeatherEnabled", "AutoTotemEnabled", "SelectedTotem",
         "DetectorStuckEnabled", "StuckThreshold", "AutoClickFishingEnabled", "WalkOnWaterEnabled",
-        "FavoriteByMutationEnabled"
+        "FavoriteByMutationEnabled", "FavoriteByNameEnabled"
     }
     
     local cleanSettings = {}
@@ -2399,6 +2402,556 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
         StopFavoriteByMutationWatcher()
         FavoriteMutationList = {}
         ShowNotification("Favorite By Mutasi Disabled", false)
+    end
+end)
+
+-- ========================================
+-- FAVORITE BY NAME FEATURE
+-- ========================================
+local FavoriteByNameList = {}
+local FavoriteByNameEnabled = false
+
+-- Section Header
+local FavoriteByNameHeader = Instance.new("TextLabel", Page_Automation)
+FavoriteByNameHeader.BackgroundTransparency = 1
+FavoriteByNameHeader.Size = UDim2.new(1, -5, 0, 20)
+FavoriteByNameHeader.Font = Enum.Font.GothamBold
+FavoriteByNameHeader.Text = "🎯 Favorite By Name"
+FavoriteByNameHeader.TextColor3 = Theme.Accent
+FavoriteByNameHeader.TextSize = 12
+FavoriteByNameHeader.TextXAlignment = "Left"
+
+-- Info Label
+local FavoriteByNameInfo = Instance.new("TextLabel", Page_Automation)
+FavoriteByNameInfo.BackgroundTransparency = 1
+FavoriteByNameInfo.Size = UDim2.new(1, -5, 0, 40)
+FavoriteByNameInfo.Font = Enum.Font.GothamMedium
+FavoriteByNameInfo.Text = "Masukkan nama ikan (tanpa mutation prefix seperti Big, Shiny, dll). Ikan akan otomatis di-favorite saat ditangkap.\n\nAtau gunakan tombol di bawah untuk load daftar ikan dari server."
+FavoriteByNameInfo.TextColor3 = Theme.TextSecondary
+FavoriteByNameInfo.TextSize = 10
+FavoriteByNameInfo.TextXAlignment = "Left"
+FavoriteByNameInfo.TextYAlignment = "Top"
+FavoriteByNameInfo.TextWrapped = true
+
+-- Load Fish List Button
+local LoadFishListBtn = Instance.new("TextButton", Page_Automation)
+LoadFishListBtn.BackgroundColor3 = Theme.Accent
+LoadFishListBtn.BackgroundTransparency = 0.1
+LoadFishListBtn.Size = UDim2.new(1, -5, 0, 36)
+LoadFishListBtn.BorderSizePixel = 0
+Instance.new("UICorner", LoadFishListBtn).CornerRadius = UDim.new(0, 6)
+LoadFishListBtn.Font = Enum.Font.GothamBold
+LoadFishListBtn.Text = "📥 Load Fish List from Server"
+LoadFishListBtn.TextColor3 = Color3.new(1, 1, 1)
+LoadFishListBtn.TextSize = 11
+Instance.new("UICorner", LoadFishListBtn).CornerRadius = UDim.new(0, 4)
+
+local AvailableFishList = {}
+
+LoadFishListBtn.MouseButton1Click:Connect(function()
+    LoadFishListBtn.Text = "⏳ Loading..."
+    
+    task.spawn(function()
+        local success, result = pcall(function()
+            local itemsFolder = ReplicatedStorage:FindFirstChild("Items")
+            if not itemsFolder then
+                return false, "Items folder not found!"
+            end
+            
+            local fishList = {}
+            for _, item in ipairs(itemsFolder:GetChildren()) do
+                if item:IsA("ModuleScript") then
+                    local itemData = require(item)
+                    if itemData and itemData.Data and itemData.Data.Type == "Fish" then
+                        table.insert(fishList, itemData.Data.Name)
+                    end
+                end
+            end
+            
+            return fishList, nil
+        end)
+        
+        if success and result then
+            if type(result) == "table" then
+                AvailableFishList = result
+                table.sort(AvailableFishList)
+                ShowNotification("Loaded " .. #AvailableFishList .. " fish!", false)
+                print("✅ Loaded " .. #AvailableFishList .. " fish from server:")
+                for _, fishName in ipairs(AvailableFishList) do
+                    print("   - " .. fishName)
+                end
+            else
+                ShowNotification("Error: " .. tostring(result), true)
+            end
+        else
+            ShowNotification("Failed to load fish list!", true)
+            print("❌ Failed to load fish list: " .. tostring(result))
+        end
+        
+        LoadFishListBtn.Text = "📥 Load Fish List from Server"
+    end)
+end)
+
+-- Dropdown to Select Fish from Loaded List
+local FishDropdownFrame = Instance.new("Frame", Page_Automation)
+FishDropdownFrame.BackgroundColor3 = Theme.Content
+FishDropdownFrame.Size = UDim2.new(1, -5, 0, 36)
+FishDropdownFrame.BorderSizePixel = 0
+Instance.new("UICorner", FishDropdownFrame).CornerRadius = UDim.new(0, 6)
+AddStroke(FishDropdownFrame, Theme.Border, 1)
+
+local DropdownLabel = Instance.new("TextLabel", FishDropdownFrame)
+DropdownLabel.BackgroundTransparency = 1
+DropdownLabel.Position = UDim2.new(0, 10, 0, 0)
+DropdownLabel.Size = UDim2.new(0, 140, 1, 0)
+DropdownLabel.Font = Enum.Font.GothamBold
+DropdownLabel.Text = "Select Fish:"
+DropdownLabel.TextColor3 = Theme.TextPrimary
+DropdownLabel.TextSize = 12
+DropdownLabel.TextXAlignment = "Left"
+
+local SelectedFishFromList = "None"
+local DropBtn = Instance.new("TextButton", FishDropdownFrame)
+DropBtn.BackgroundColor3 = Theme.Input
+DropBtn.Position = UDim2.new(0, 160, 0.5, -10)
+DropBtn.Size = UDim2.new(1, -170, 0, 20)
+DropBtn.Font = Enum.Font.GothamMedium
+DropBtn.Text = "None (Load first) v"
+DropBtn.TextColor3 = Theme.TextPrimary
+DropBtn.TextSize = 11
+Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 4)
+AddStroke(DropBtn, Theme.Border, 1)
+
+DropBtn.MouseButton1Click:Connect(function()
+    if #AvailableFishList == 0 then
+        ShowNotification("Load fish list first!", true)
+        return
+    end
+    
+    -- Close existing dropdown if any
+    for _, child in ipairs(Page_Automation:GetChildren()) do
+        if child.Name == "FishDropdownList" then
+            child:Destroy()
+        end
+    end
+    
+    local Float = Instance.new("ScrollingFrame", Page_Automation)
+    Float.Name = "FishDropdownList"
+    Float.BackgroundColor3 = Theme.Content
+    Float.Size = UDim2.new(1, -5, 0, math.min(#AvailableFishList * 25 + 5, 200))
+    Float.ZIndex = 200
+    Float.ScrollBarThickness = 4
+    Instance.new("UICorner", Float).CornerRadius = UDim.new(0, 6)
+    AddStroke(Float, Theme.Accent, 1)
+    
+    local ListLayout = Instance.new("UIListLayout", Float)
+    ListLayout.Padding = UDim.new(0, 2)
+    
+    for _, fishName in ipairs(AvailableFishList) do
+        local OBtn = Instance.new("TextButton", Float)
+        OBtn.Size = UDim2.new(1, 0, 0, 25)
+        OBtn.BackgroundColor3 = Theme.Input
+        OBtn.BackgroundTransparency = 0.5
+        OBtn.Text = "  " .. fishName
+        OBtn.TextColor3 = Theme.TextPrimary
+        OBtn.Font = Enum.Font.GothamMedium
+        OBtn.TextSize = 11
+        
+        OBtn.MouseButton1Click:Connect(function()
+            SelectedFishFromList = fishName
+            DropBtn.Text = fishName .. " v"
+            
+            -- Auto-add to favorite list
+            local alreadyExists = false
+            for _, name in ipairs(FavoriteByNameList) do
+                if string.lower(name) == string.lower(fishName) then
+                    alreadyExists = true
+                    break
+                end
+            end
+            
+            if not alreadyExists then
+                table.insert(FavoriteByNameList, fishName)
+                ShowNotification("Added: " .. fishName, false)
+                print("✅ Favorite By Name - Added: " .. fishName)
+            else
+                ShowNotification("Fish already in list!", true)
+            end
+            
+            Float:Destroy()
+        end)
+    end
+    
+    local Close = Instance.new("TextButton", Float)
+    Close.Size = UDim2.new(1, 0, 0, 20)
+    Close.BackgroundColor3 = Theme.Error
+    Close.Text = "CLOSE"
+    Close.TextColor3 = Color3.new(1, 1, 1)
+    Close.TextSize = 10
+    Close.MouseButton1Click:Connect(function()
+        Float:Destroy()
+    end)
+end)
+
+-- Input Field for Manual Fish Name Entry
+local FishNameInput = CreateInput(Page_Automation, "Or Enter Fish Name", "", function(text)
+    local fishName = text:match("^%s*(.-)%s*$")
+    if fishName and fishName ~= "" then
+        -- Check if already in list
+        local alreadyExists = false
+        for _, name in ipairs(FavoriteByNameList) do
+            if string.lower(name) == string.lower(fishName) then
+                alreadyExists = true
+                break
+            end
+        end
+        
+        if not alreadyExists then
+            table.insert(FavoriteByNameList, fishName)
+            ShowNotification("Added: " .. fishName, false)
+            print("✅ Favorite By Name - Added: " .. fishName)
+            print("   Current List: " .. table.concat(FavoriteByNameList, ", "))
+        else
+            ShowNotification("Fish already in list!", true)
+        end
+    end
+end)
+
+-- Remove Fish Button
+local RemoveFishBtn = Instance.new("TextButton", Page_Automation)
+RemoveFishBtn.BackgroundColor3 = Theme.Error
+RemoveFishBtn.BackgroundTransparency = 0.1
+RemoveFishBtn.Size = UDim2.new(1, -5, 0, 36)
+RemoveFishBtn.BorderSizePixel = 0
+Instance.new("UICorner", RemoveFishBtn).CornerRadius = UDim.new(0, 6)
+RemoveFishBtn.Font = Enum.Font.GothamBold
+RemoveFishBtn.Text = "🗑️ Remove Last Added Fish"
+RemoveFishBtn.TextColor3 = Color3.new(1, 1, 1)
+RemoveFishBtn.TextSize = 11
+Instance.new("UICorner", RemoveFishBtn).CornerRadius = UDim.new(0, 4)
+
+RemoveFishBtn.MouseButton1Click:Connect(function()
+    if #FavoriteByNameList > 0 then
+        local removed = table.remove(FavoriteByNameList)
+        ShowNotification("Removed: " .. removed, false)
+        print("❌ Favorite By Name - Removed: " .. removed)
+        print("   Current List: " .. table.concat(FavoriteByNameList, ", "))
+    else
+        ShowNotification("List is empty!", true)
+    end
+end)
+
+-- Clear All Button
+local ClearAllBtn = Instance.new("TextButton", Page_Automation)
+ClearAllBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+ClearAllBtn.BackgroundTransparency = 0.1
+ClearAllBtn.Size = UDim2.new(1, -5, 0, 36)
+ClearAllBtn.BorderSizePixel = 0
+Instance.new("UICorner", ClearAllBtn).CornerRadius = UDim.new(0, 6)
+ClearAllBtn.Font = Enum.Font.GothamBold
+ClearAllBtn.Text = "🧹 Clear All Fish"
+ClearAllBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearAllBtn.TextSize = 11
+Instance.new("UICorner", ClearAllBtn).CornerRadius = UDim.new(0, 4)
+
+ClearAllBtn.MouseButton1Click:Connect(function()
+    if #FavoriteByNameList > 0 then
+        FavoriteByNameList = {}
+        ShowNotification("All fish cleared!", false)
+        print("🗑️ Favorite By Name - All fish cleared")
+    else
+        ShowNotification("List is already empty!", true)
+    end
+end)
+
+-- Display Current List
+local CurrentListLabel = Instance.new("TextLabel", Page_Automation)
+CurrentListLabel.BackgroundTransparency = 1
+CurrentListLabel.Size = UDim2.new(1, -5, 0, 20)
+CurrentListLabel.Font = Enum.Font.GothamBold
+CurrentListLabel.Text = "📋 Current Favorite List:"
+CurrentListLabel.TextColor3 = Theme.TextPrimary
+CurrentListLabel.TextSize = 11
+CurrentListLabel.TextXAlignment = "Left"
+
+local CurrentListFrame = Instance.new("Frame", Page_Automation)
+CurrentListFrame.BackgroundColor3 = Theme.Content
+CurrentListFrame.Size = UDim2.new(1, -5, 0, 60)
+CurrentListFrame.BorderSizePixel = 0
+Instance.new("UICorner", CurrentListFrame).CornerRadius = UDim.new(0, 6)
+AddStroke(CurrentListFrame, Theme.Border, 1)
+
+local CurrentListText = Instance.new("TextLabel", CurrentListFrame)
+CurrentListText.BackgroundTransparency = 1
+CurrentListText.Position = UDim2.new(0, 8, 0, 5)
+CurrentListText.Size = UDim2.new(1, -16, 1, -10)
+CurrentListText.Font = Enum.Font.GothamMedium
+CurrentListText.Text = "No fish added yet"
+CurrentListText.TextColor3 = Theme.TextSecondary
+CurrentListText.TextSize = 10
+CurrentListText.TextXAlignment = "Left"
+CurrentListText.TextYAlignment = "Top"
+CurrentListText.TextWrapped = true
+
+-- Toggle for Favorite By Name
+CreateToggle(Page_Automation, "Enable Favorite By Name", "FavoriteByNameEnabled", function(state)
+    FavoriteByNameEnabled = state
+    Settings.FavoriteByNameEnabled = state
+    
+    if state then
+        if #FavoriteByNameList == 0 then
+            ShowNotification("Please add fish names first!", true)
+            Settings.FavoriteByNameEnabled = false
+            return
+        end
+        
+        StartFavoriteByNameWatcher()
+        print("\n========== FAVORITE BY NAME ENABLED ==========")
+        print("Fish List: " .. table.concat(FavoriteByNameList, ", "))
+        print("================================================\n")
+        ShowNotification("Favorite By Name Enabled (" .. #FavoriteByNameList .. " fish)", false)
+    else
+        StopFavoriteByNameWatcher()
+        ShowNotification("Favorite By Name Disabled", false)
+    end
+end)
+
+-- Update list display function
+local function UpdateFavoriteByNameList()
+    if #FavoriteByNameList == 0 then
+        CurrentListText.Text = "No fish added yet"
+    else
+        local displayText = ""
+        for i, name in ipairs(FavoriteByNameList) do
+            displayText = displayText .. i .. ". " .. name
+            if i < #FavoriteByNameList then
+                displayText = displayText .. "\n"
+            end
+        end
+        CurrentListText.Text = displayText
+    end
+end
+
+-- Update list periodically
+task.spawn(function()
+    while ScriptActive do
+        UpdateFavoriteByNameList()
+        task.wait(0.5)
+    end
+end)
+
+-- Quick Add Secret Fish Button
+local QuickAddHeader = Instance.new("TextLabel", Page_Automation)
+QuickAddHeader.BackgroundTransparency = 1
+QuickAddHeader.Size = UDim2.new(1, -5, 0, 20)
+QuickAddHeader.Font = Enum.Font.GothamBold
+QuickAddHeader.Text = "⚡ Quick Add Secret Fish:"
+QuickAddHeader.TextColor3 = Theme.Accent
+QuickAddHeader.TextSize = 11
+QuickAddHeader.TextXAlignment = "Left"
+
+local QuickAddContainer = Instance.new("Frame", Page_Automation)
+QuickAddContainer.BackgroundColor3 = Theme.Content
+QuickAddContainer.Size = UDim2.new(1, -5, 0, 100)
+QuickAddContainer.BorderSizePixel = 0
+Instance.new("UICorner", QuickAddContainer).CornerRadius = UDim.new(0, 6)
+AddStroke(QuickAddContainer, Theme.Border, 1)
+
+local QuickAddLayout = Instance.new("UIGridLayout", QuickAddContainer)
+QuickAddLayout.CellSize = UDim2.new(0.5, -5, 0, 30)
+QuickAddLayout.CellPadding = UDim2.new(0, 5, 0, 5)
+QuickAddLayout.FillDirection = Enum.FillDirection.Horizontal
+
+local SecretFishToAdd = {
+    "1x1x1x1 Comet Shark", "Banditfish", "Crystal Crab", "Orca", "Zombie Shark",
+    "Megalodon", "Ghost Shark", "King Crab", "Leviathan"
+}
+
+for _, fishName in ipairs(SecretFishToAdd) do
+    local QuickBtn = Instance.new("TextButton", QuickAddContainer)
+    QuickBtn.BackgroundColor3 = Theme.Input
+    QuickBtn.BackgroundTransparency = 0.3
+    QuickBtn.Font = Enum.Font.GothamMedium
+    QuickBtn.Text = "+ " .. fishName
+    QuickBtn.TextColor3 = Theme.TextPrimary
+    QuickBtn.TextSize = 9
+    QuickBtn.TextWrapped = true
+    Instance.new("UICorner", QuickBtn).CornerRadius = UDim.new(0, 4)
+
+    QuickBtn.MouseButton1Click:Connect(function()
+        local alreadyExists = false
+        for _, name in ipairs(FavoriteByNameList) do
+            if string.lower(name) == string.lower(fishName) then
+                alreadyExists = true
+                break
+            end
+        end
+
+        if not alreadyExists then
+            table.insert(FavoriteByNameList, fishName)
+            ShowNotification("Added: " .. fishName, false)
+        else
+            ShowNotification("Already in list!", true)
+        end
+    end)
+end
+
+-- ========================================
+-- FAVORITE BY NAME WATCHER
+-- ========================================
+local FavoriteByNameConnection = nil
+
+local function GetFishNameWithoutMutation(fullName)
+    -- Remove common mutation prefixes
+    local prefixes = {"Big ", "Shiny ", "Sparkling ", "Giant ", "Golden ", "Darkened "}
+    local result = fullName
+    
+    for _, prefix in ipairs(prefixes) do
+        if string.sub(string.lower(result), 1, #prefix - 1) == string.sub(prefix, 1, -2) then
+            result = string.sub(result, #prefix + 1)
+            break
+        end
+    end
+    
+    return result
+end
+
+local function IsFishInFavoriteList(fishName)
+    local cleanName = GetFishNameWithoutMutation(fishName)
+    
+    for _, favName in ipairs(FavoriteByNameList) do
+        -- Check exact match (case insensitive)
+        if string.lower(cleanName) == string.lower(favName) then
+            return true
+        end
+        -- Also check if favName is contained in the full name
+        if string.find(string.lower(cleanName), string.lower(favName)) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+local function OnFishObtainedForFavoriteByName(fishId, weight, inventoryItem)
+    if not FavoriteByNameEnabled or #FavoriteByNameList == 0 then
+        return
+    end
+
+    -- Get fish name from inventory item metadata
+    local fishName = nil
+
+    if inventoryItem and inventoryItem.Metadata then
+        if type(inventoryItem.Metadata) == "table" then
+            -- Try to get name from Metadata table (following the fish script structure)
+            if inventoryItem.Metadata.Data and type(inventoryItem.Metadata.Data) == "table" then
+                fishName = inventoryItem.Metadata.Data.Name
+            end
+            
+            if not fishName and inventoryItem.Metadata.Name then
+                fishName = inventoryItem.Metadata.Name
+            end
+            
+            if not fishName and inventoryItem.Metadata.FishName then
+                fishName = inventoryItem.Metadata.FishName
+            end
+        end
+    end
+
+    -- Alternative: try to get from weight table
+    if not fishName and weight and type(weight) == "table" then
+        if weight.Name then
+            fishName = weight.Name
+        elseif weight.Data and type(weight.Data) == "table" and weight.Data.Name then
+            fishName = weight.Data.Name
+        end
+    end
+
+    -- Alternative: try to get from ReplicatedStorage.Items using fishId
+    if not fishName and fishId then
+        local success, result = pcall(function()
+            local itemsFolder = ReplicatedStorage:FindFirstChild("Items")
+            if itemsFolder then
+                for _, item in ipairs(itemsFolder:GetChildren()) do
+                    if item:IsA("ModuleScript") then
+                        local itemData = require(item)
+                        if itemData and itemData.Data and itemData.Data.Id == fishId then
+                            return itemData.Data.Name
+                        end
+                    end
+                end
+            end
+            return nil
+        end)
+        if success and result then
+            fishName = result
+        end
+    end
+
+    if fishName then
+        print("🐟 Fish obtained: " .. tostring(fishName))
+        print("   fishId: " .. tostring(fishId))
+        print("   inventoryItem: " .. tostring(inventoryItem))
+
+        if IsFishInFavoriteList(fishName) then
+            print("🎯 Match found in Favorite By Name list!")
+
+            local uuid = nil
+            if inventoryItem and inventoryItem.UUID then
+                uuid = inventoryItem.UUID
+            end
+
+            if uuid then
+                FavoriteFishByUUID(uuid)
+                ShowNotification("Auto-favorited: " .. fishName, false)
+            end
+        end
+    else
+        print("⚠️ Could not determine fish name from obtained fish")
+    end
+end
+
+local function StartFavoriteByNameWatcher()
+    if FavoriteByNameConnection then
+        FavoriteByNameConnection:Disconnect()
+        FavoriteByNameConnection = nil
+    end
+    
+    if FavoriteByNameEnabled and #FavoriteByNameList > 0 then
+        if not RE_ObtainedNewFishNotification then
+            print("❌ RE_ObtainedNewFishNotification not found!")
+            return
+        end
+        
+        FavoriteByNameConnection = RE_ObtainedNewFishNotification.OnClientEvent:Connect(OnFishObtainedForFavoriteByName)
+        print("✅ Favorite By Name watcher STARTED for: " .. table.concat(FavoriteByNameList, ", "))
+    end
+end
+
+local function StopFavoriteByNameWatcher()
+    if FavoriteByNameConnection then
+        FavoriteByNameConnection:Disconnect()
+        FavoriteByNameConnection = nil
+        print("⏹️ Favorite By Name watcher STOPPED")
+    end
+end
+
+-- Monitor toggle and update watcher
+task.spawn(function()
+    while ScriptActive do
+        if Settings.FavoriteByNameEnabled ~= nil then
+            FavoriteByNameEnabled = Settings.FavoriteByNameEnabled
+        end
+        
+        if FavoriteByNameEnabled and #FavoriteByNameList > 0 then
+            if not FavoriteByNameConnection then
+                StartFavoriteByNameWatcher()
+            end
+        elseif not FavoriteByNameEnabled then
+            StopFavoriteByNameWatcher()
+        end
+        
+        task.wait(0.5)
     end
 end)
 
