@@ -2387,10 +2387,9 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
         FavoriteMutationList = {SelectedMutation}
         print("\n========== FAVORITE BY MUTASI ENABLED ==========")
         print("Selected Mutation: " .. SelectedMutation)
-        
-        -- Get mutation Id for debugging
-        local mutId = GetMutationIdByName(SelectedMutation)
-        print("Mutation Id: " .. tostring(mutId))
+        print("Remote Status:")
+        print("  RE_FavoriteItem: " .. tostring(RE_FavoriteItem))
+        print("  RE_ObtainedNewFishNotification: " .. tostring(RE_ObtainedNewFishNotification))
         
         StartFavoriteByMutationWatcher()
         print("================================================\n")
@@ -2995,58 +2994,27 @@ local function StartInventoryWatcher()
 end
 task.spawn(StartInventoryWatcher)
 
--- Favorite By Mutasi System
+-- Favorite By Mutasi System (Following free.lua pattern)
 local FavoriteByMutationConnection = nil
-local LastFavoritedFishUUID = nil
-local LastFavoriteTime = 0
-local FavoriteCooldown = 0.5 -- 0.5 seconds cooldown for faster response
 local FavoriteMutationList = {} -- List of mutation names to favorite
 
-local function GetFavoriteRemote()
-    local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
-    if netPath then
-        local remote = netPath:FindFirstChild("RE/FavoriteItem")
-        if remote then
-            print("✅ Favorite Remote found: " .. remote:GetFullName())
-        else
-            print("⚠️ RE/FavoriteItem not found in net path")
-        end
-        return remote
-    end
-    return nil
-end
+local net = ReplicatedStorage:WaitForChild("Packages", 10):WaitForChild("_Index", 10):WaitForChild("sleitnick_net@0.2.0", 10):WaitForChild("net", 10)
 
-local function GetNotificationRemote()
-    local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
-    if netPath then
-        local remote = netPath:FindFirstChild("RE/ObtainedNewFishNotification")
-        if remote then
-            print("✅ Notification Remote found: " .. remote:GetFullName())
-        else
-            print("⚠️ RE/ObtainedNewFishNotification not found")
-        end
-        return remote
-    end
-    return nil
-end
+local RE_FavoriteItem = net:FindFirstChild("RE/FavoriteItem")
+local RE_ObtainedNewFishNotification = net:FindFirstChild("RE/ObtainedNewFishNotification")
+
+print("🔍 Favorite Remote: " .. tostring(RE_FavoriteItem))
+print("🔍 Notification Remote: " .. tostring(RE_ObtainedNewFishNotification))
 
 local function FavoriteFishByUUID(uuid)
-    if not uuid or uuid == LastFavoritedFishUUID then 
-        return false 
-    end
-
-    local RE_FavoriteItem = GetFavoriteRemote()
-    if not RE_FavoriteItem then
-        return false
-    end
-
+    if not uuid then return false end
+    if not RE_FavoriteItem then return false end
+    
     local success = pcall(function()
         RE_FavoriteItem:FireServer(uuid)
     end)
     
     if success then
-        LastFavoritedFishUUID = uuid
-        LastFavoriteTime = tick()
         print("✅ NikeeHUB: Favorited fish with UUID: " .. tostring(uuid))
         return true
     else
@@ -3055,64 +3023,39 @@ local function FavoriteFishByUUID(uuid)
     end
 end
 
-local MutationNameToIdMap = {} -- Cache mutation name to Id mapping
-
-local function GetMutationIdByName(mutationName)
-    -- Check cache first
-    if MutationNameToIdMap[mutationName] then
-        return MutationNameToIdMap[mutationName]
-    end
-    
-    local variantsFolder = ReplicatedStorage:FindFirstChild("Variants")
-    if variantsFolder then
-        for _, child in ipairs(variantsFolder:GetChildren()) do
-            if child:IsA("ModuleScript") then
-                local success, moduleData = pcall(function()
-                    return require(child)
-                end)
-                if success and moduleData and moduleData.Data then
-                    local name = moduleData.Data.Name
-                    local id = moduleData.Data.Id
-                    if name and name == mutationName and id then
-                        MutationNameToIdMap[mutationName] = id
-                        return id
-                    end
-                end
-            end
-        end
-    end
-    return nil
-end
-
 local function OnFishObtained(fishId, weight, inventoryItem)
     if not FavoriteByMutationEnabled or #FavoriteMutationList == 0 then
         return
     end
 
-    -- Get mutation data from inventoryItem
+    -- Get VariantId from weight table or inventoryItem
     local variantId = nil
-    if inventoryItem and inventoryItem.Metadata then
+    
+    if weight and type(weight) == "table" and weight.VariantId then
+        variantId = weight.VariantId
+    elseif inventoryItem and inventoryItem.Metadata and inventoryItem.Metadata.VariantId then
         variantId = inventoryItem.Metadata.VariantId
     end
-
+    
     if variantId then
-        print("🔍 NikeeHUB: Fish obtained! VariantId: " .. tostring(variantId) .. " (type: " .. typeof(variantId) .. ")")
+        print("🐟 Fish obtained! VariantId: " .. tostring(variantId) .. " | Type: " .. typeof(variantId))
         
         -- Check if this mutation is in our favorite list
         for _, mutName in ipairs(FavoriteMutationList) do
-            -- Compare directly as string (VariantId is the mutation name)
             if tostring(variantId) == mutName then
-                print("🎯 NikeeHUB: Fish with mutation '" .. mutName .. "' detected!")
+                print("🎯 Match found! Favoriting " .. mutName .. "...")
+                
+                local uuid = nil
                 if inventoryItem and inventoryItem.UUID then
-                    local result = FavoriteFishByUUID(inventoryItem.UUID)
-                    print("📌 Favorite result: " .. tostring(result))
+                    uuid = inventoryItem.UUID
+                end
+                
+                if uuid then
+                    FavoriteFishByUUID(uuid)
                 end
                 return
             end
         end
-        print("⚠️ Mutation '" .. tostring(variantId) .. "' not in favorite list: " .. table.concat(FavoriteMutationList, ", "))
-    else
-        print("⚠️ No VariantId found in inventoryItem")
     end
 end
 
@@ -3123,13 +3066,13 @@ local function StartFavoriteByMutationWatcher()
     end
 
     if FavoriteByMutationEnabled and #FavoriteMutationList > 0 then
-        local RE_Notification = GetNotificationRemote()
-        if RE_Notification then
-            FavoriteByMutationConnection = RE_Notification.OnClientEvent:Connect(OnFishObtained)
-            print("✅ NikeeHUB: Started Favorite By Mutasi watcher for: " .. table.concat(FavoriteMutationList, ", "))
-        else
-            print("❌ Could not find notification remote!")
+        if not RE_ObtainedNewFishNotification then
+            print("❌ RE_ObtainedNewFishNotification not found!")
+            return
         end
+        
+        FavoriteByMutationConnection = RE_ObtainedNewFishNotification.OnClientEvent:Connect(OnFishObtained)
+        print("✅ Favorite By Mutasi watcher STARTED for: " .. table.concat(FavoriteMutationList, ", "))
     end
 end
 
@@ -3137,8 +3080,29 @@ local function StopFavoriteByMutationWatcher()
     if FavoriteByMutationConnection then
         FavoriteByMutationConnection:Disconnect()
         FavoriteByMutationConnection = nil
-        print("⏹️ NikeeHUB: Stopped Favorite By Mutasi watcher")
+        print("⏹️ Favorite By Mutasi watcher STOPPED")
     end
 end
+
+task.spawn(function()
+    local lastMutationCheck = ""
+    
+    while ScriptActive do
+        if Settings.FavoriteByMutationEnabled ~= nil then
+            FavoriteByMutationEnabled = Settings.FavoriteByMutationEnabled
+        end
+        
+        if FavoriteByMutationEnabled and SelectedMutation ~= lastMutationCheck and SelectedMutation ~= "None" and SelectedMutation ~= "" then
+            lastMutationCheck = SelectedMutation
+            FavoriteMutationList = {SelectedMutation}
+            StartFavoriteByMutationWatcher()
+        elseif not FavoriteByMutationEnabled then
+            StopFavoriteByMutationWatcher()
+            FavoriteMutationList = {}
+        end
+        
+        task.wait(0.5)
+    end
+end)
 
 print("✅ NikeeHUB System Session v1.0 Loaded!")
