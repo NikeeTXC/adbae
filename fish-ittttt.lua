@@ -2338,6 +2338,26 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
             Settings.FavoriteByMutationEnabled = false
             return
         end
+        
+        -- Auto dump inventory when enabling
+        print("\n========== FAVORITE BY MUTASI ENABLED ==========")
+        print("Selected Mutation: " .. SelectedMutation)
+        local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
+        if Replion then
+            local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
+            if success and data and data.Items then
+                print("📦 Total Items: " .. #data.Items)
+                for i, item in ipairs(data.Items) do
+                    if item and item.Name then
+                        local itemMut = item.Mutation or item.Variant or item.mutation or item.variant or item.Type or item.rarity or "UNKNOWN"
+                        local itemFav = item.IsFavorite or item.Favorited or item.isFavorite or item.favorite or false
+                        print("  [" .. i .. "] " .. tostring(item.Name) .. " | Mut: " .. tostring(itemMut) .. " | Fav: " .. tostring(itemFav))
+                    end
+                end
+            end
+        end
+        print("================================================\n")
+        
         ShowNotification("Favorite By Mutasi Enabled: " .. SelectedMutation, false)
     else
         ShowNotification("Favorite By Mutasi Disabled", false)
