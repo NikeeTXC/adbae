@@ -3091,22 +3091,28 @@ local function OnFishObtained(fishId, weight, inventoryItem)
 
     -- Get mutation data from inventoryItem
     local variantId = nil
-    if inventoryItem and inventoryItem.Metadata and inventoryItem.Metadata.VariantId then
+    if inventoryItem and inventoryItem.Metadata then
         variantId = inventoryItem.Metadata.VariantId
     end
 
     if variantId then
+        print("🔍 NikeeHUB: Fish obtained! VariantId: " .. tostring(variantId) .. " (type: " .. typeof(variantId) .. ")")
+        
         -- Check if this mutation is in our favorite list
         for _, mutName in ipairs(FavoriteMutationList) do
-            local expectedId = GetMutationIdByName(mutName)
-            if expectedId and tostring(variantId) == tostring(expectedId) then
-                print("🎯 NikeeHUB: Fish with mutation '" .. mutName .. "' detected! VariantId: " .. tostring(variantId))
+            -- Compare directly as string (VariantId is the mutation name)
+            if tostring(variantId) == mutName then
+                print("🎯 NikeeHUB: Fish with mutation '" .. mutName .. "' detected!")
                 if inventoryItem and inventoryItem.UUID then
-                    FavoriteFishByUUID(inventoryItem.UUID)
+                    local result = FavoriteFishByUUID(inventoryItem.UUID)
+                    print("📌 Favorite result: " .. tostring(result))
                 end
                 return
             end
         end
+        print("⚠️ Mutation '" .. tostring(variantId) .. "' not in favorite list: " .. table.concat(FavoriteMutationList, ", "))
+    else
+        print("⚠️ No VariantId found in inventoryItem")
     end
 end
 
