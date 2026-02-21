@@ -234,7 +234,10 @@ local Settings = {
     AutoClickFishingEnabled = false,
 
     -- Walk On Water
-    WalkOnWaterEnabled = false
+    WalkOnWaterEnabled = false,
+
+    -- Favorite By Mutasi Settings
+    FavoriteByMutationEnabled = false
 }
 
 task.spawn(function()
@@ -599,11 +602,12 @@ end
 
 local Page_Webhook = CreatePage("Webhook")
 local Page_Config = nil
-local Page_Save = CreatePage("SaveConfig") 
+local Page_Save = CreatePage("SaveConfig")
 local Page_Tag = CreatePage("TagDiscord")
 local Page_AdminBoost = CreatePage("AdminBoost")
 local Page_SessionStats = CreatePage("SessionStats")
 local Page_Fhising = CreatePage("Fhising")
+local Page_Automation = CreatePage("Automation")
 local Page_Setting
 
 Page_Webhook.Visible = false
@@ -729,6 +733,7 @@ end
 CreateTab("Notification", Page_Webhook)
 CreateTab("Admin Boost", Page_AdminBoost)
 CreateTab("List Player", Page_Tag)
+CreateTab("Automation", Page_Automation)
 Page_Setting = Instance.new("ScrollingFrame", ContentContainer)
 Page_Setting.Name = "Page_Setting"; Page_Setting.Size = UDim2.new(1, 0, 1, 0); Page_Setting.BackgroundTransparency = 1; Page_Setting.Visible = false; Page_Setting.ScrollBarThickness = 2
 Instance.new("UIListLayout", Page_Setting).Padding = UDim.new(0, 5)
@@ -1720,7 +1725,8 @@ SaveBtn.MouseButton1Click:Connect(function()
         "EvolvedEnabled", "InstantFishingEnabled", "InstantFishingCompleteDelay",
         "InstantFishingCastDelay", "InstantFishingClaimAmount", "AutoSellThreshold",
         "AutoSellEnabled", "AutoWeatherEnabled", "AutoTotemEnabled", "SelectedTotem",
-        "DetectorStuckEnabled", "StuckThreshold", "AutoClickFishingEnabled", "WalkOnWaterEnabled"
+        "DetectorStuckEnabled", "StuckThreshold", "AutoClickFishingEnabled", "WalkOnWaterEnabled",
+        "FavoriteByMutationEnabled"
     }
     
     local cleanSettings = {}
@@ -2245,6 +2251,66 @@ CreateToggle(Page_AdminBoost, "Lag Detector (Ping > 500ms)", "PingMonitor", func
 CreateToggle(Page_AdminBoost, "Player Leave Server", "LeaveEnabled", function(v) Settings.LeaveEnabled = v end, function() return Current_Webhook_Leave ~= "" end)
 CreateToggle(Page_AdminBoost, "Player Not On Server (30 minutes)", "PlayerNonPSAuto", function(v) Settings.PlayerNonPSAuto = v end, function() return Current_Webhook_List ~= "" end)
 CreateToggle(Page_Setting, "Auto Execute on Server Hop", "AutoExecute", function(v) Settings.AutoExecute = v end)
+
+-- Automation Page UI
+do
+    local lbl = Instance.new("TextLabel", Page_Automation)
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -5, 0, 20)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = "⭐ Favorite By Mutasi"
+    lbl.TextColor3 = Theme.Accent
+    lbl.TextSize = 12
+    lbl.TextXAlignment = "Left"
+end
+
+local MutationList = {}
+local SelectedMutation = "None"
+local FavoriteByMutationEnabled = false
+
+local function GetMutationList()
+    local mutations = {}
+    local variantsFolder = ReplicatedStorage:FindFirstChild("Variants")
+    if variantsFolder then
+        for _, child in ipairs(variantsFolder:GetChildren()) do
+            if child:IsA("ModuleScript") or child:IsA("StringValue") or child:IsA("Configuration") then
+                local mutationName = child.Name
+                if mutationName ~= "None" and mutationName ~= "" then
+                    table.insert(mutations, mutationName)
+                end
+            end
+        end
+    end
+    table.sort(mutations)
+    table.insert(mutations, 1, "None")
+    return mutations
+end
+
+MutationList = GetMutationList()
+
+CreateDropdown(Page_Automation, "Select Mutation", MutationList, "None", function(v)
+    SelectedMutation = v
+    ShowNotification("Selected Mutation: " .. v, false)
+end)
+
+CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEnabled", function(state)
+    FavoriteByMutationEnabled = state
+    Settings.FavoriteByMutationEnabled = state
+    if state then
+        if SelectedMutation == "None" or SelectedMutation == "" then
+            ShowNotification("Please select a mutation first!", true)
+            Settings.FavoriteByMutationEnabled = false
+            return
+        end
+        ShowNotification("Favorite By Mutasi Enabled: " .. SelectedMutation, false)
+    else
+        ShowNotification("Favorite By Mutasi Disabled", false)
+    end
+end)
+
+local SpacerAuto = Instance.new("Frame", Page_Automation)
+SpacerAuto.BackgroundTransparency = 1
+SpacerAuto.Size = UDim2.new(1, 0, 0, 10)
 
 local LastPingAlert = 0
 task.spawn(function()
@@ -2824,7 +2890,7 @@ local function StartInventoryWatcher()
 
     table.insert(Connections, Backpack.ChildAdded:Connect(function(child)
         if not ScriptActive then return end
-        if child.Name == "Cave Crystal" then 
+        if child.Name == "Cave Crystal" then
              if tick() - CaveCrystalDebounce > 10 then
                  CaveCrystalDebounce = tick()
                  SendWebhook({ Player = Players.LocalPlayer.Name, ListText = "⛏️ **Found a Cave Crystal!**" }, "CAVECRYSTAL")
@@ -2833,5 +2899,117 @@ local function StartInventoryWatcher()
     end))
 end
 task.spawn(StartInventoryWatcher)
+
+-- Favorite By Mutasi System
+local FavoriteByMutationConnection = nil
+local LastFavoritedFishUUID = nil
+local LastFavoriteTime = 0
+local FavoriteCooldown = 2 -- 2 seconds cooldown to prevent spam
+
+local function GetFavoriteRemote()
+    local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
+    if netPath then
+        return netPath:FindFirstChild("RE/FavoriteItem")
+    end
+    return nil
+end
+
+local function FavoriteFishByUUID(uuid)
+    if not uuid or uuid == LastFavoritedFishUUID then return false end
+
+    local RE_FavoriteItem = GetFavoriteRemote()
+    if not RE_FavoriteItem then
+        print("⚠️ Favorite Remote not found!")
+        return false
+    end
+
+    pcall(function()
+        RE_FavoriteItem:FireServer(uuid)
+        LastFavoritedFishUUID = uuid
+        LastFavoriteTime = tick()
+        print("✅ NikeeHUB: Favorited fish with UUID: " .. tostring(uuid))
+    end)
+    return true
+end
+
+local function CheckAndFavoriteFishByMutation()
+    if not FavoriteByMutationEnabled or SelectedMutation == "None" or SelectedMutation == "" then
+        return
+    end
+    
+    if tick() - LastFavoriteTime < FavoriteCooldown then
+        return
+    end
+    
+    local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
+    if not Replion then return end
+    
+    local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
+    if not success or not data or not data.Items then return end
+    
+    for _, item in ipairs(data.Items) do
+        if item and item.UUID and item.Name then
+            local itemName = tostring(item.Name)
+            local itemMutation = item.Mutation or item.Variant or "None"
+            local itemUUID = tostring(item.UUID)
+            
+            if itemMutation == SelectedMutation and itemUUID ~= LastFavoritedFishUUID then
+                local isFavorite = item.IsFavorite or item.Favorited or false
+                
+                if not isFavorite then
+                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. itemName)
+                    FavoriteFishByUUID(itemUUID)
+                    return
+                end
+            end
+        end
+    end
+end
+
+local function StartFavoriteByMutationWatcher()
+    if FavoriteByMutationConnection then
+        FavoriteByMutationConnection:Disconnect()
+        FavoriteByMutationConnection = nil
+    end
+    
+    if FavoriteByMutationEnabled and SelectedMutation ~= "None" and SelectedMutation ~= "" then
+        FavoriteByMutationConnection = RunService.RenderStepped:Connect(function()
+            if not ScriptActive then return end
+            CheckAndFavoriteFishByMutation()
+        end)
+        print("✅ NikeeHUB: Started Favorite By Mutasi watcher for: " .. SelectedMutation)
+    end
+end
+
+local function StopFavoriteByMutationWatcher()
+    if FavoriteByMutationConnection then
+        FavoriteByMutationConnection:Disconnect()
+        FavoriteByMutationConnection = nil
+        print("⏹️ NikeeHUB: Stopped Favorite By Mutasi watcher")
+    end
+end
+
+task.spawn(function()
+    local lastMutationCheck = ""
+    
+    while ScriptActive do
+        if Settings.FavoriteByMutationEnabled ~= nil then
+            FavoriteByMutationEnabled = Settings.FavoriteByMutationEnabled
+        end
+        
+        if FavoriteByMutationEnabled and SelectedMutation ~= lastMutationCheck then
+            lastMutationCheck = SelectedMutation
+            if SelectedMutation ~= "None" and SelectedMutation ~= "" then
+                StartFavoriteByMutationWatcher()
+            else
+                StopFavoriteByMutationWatcher()
+            end
+        elseif not FavoriteByMutationEnabled then
+            StopFavoriteByMutationWatcher()
+        end
+        
+        task.wait(0.5)
+    end
+end)
 
 print("✅ NikeeHUB System Session v1.0 Loaded!")
