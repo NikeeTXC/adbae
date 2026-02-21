@@ -2904,62 +2904,95 @@ task.spawn(StartInventoryWatcher)
 local FavoriteByMutationConnection = nil
 local LastFavoritedFishUUID = nil
 local LastFavoriteTime = 0
-local FavoriteCooldown = 2 -- 2 seconds cooldown to prevent spam
+local FavoriteCooldown = 0.5 -- 0.5 seconds cooldown for faster response
 
 local function GetFavoriteRemote()
     local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
     if netPath then
-        return netPath:FindFirstChild("RE/FavoriteItem")
+        local remote = netPath:FindFirstChild("RE/FavoriteItem")
+        if remote then
+            print("✅ Favorite Remote found: " .. remote:GetFullName())
+        else
+            print("⚠️ RE/FavoriteItem not found in net path")
+            -- List semua remote yang ada untuk debug
+            print("📋 Available remotes in net:")
+            for _, child in ipairs(netPath:GetChildren()) do
+                if child.Name:lower():find("favorite") then
+                    print("   - " .. child.Name .. " (" .. child.ClassName .. ")")
+                end
+            end
+        end
+        return remote
     end
     return nil
 end
 
 local function FavoriteFishByUUID(uuid)
-    if not uuid or uuid == LastFavoritedFishUUID then return false end
+    if not uuid or uuid == LastFavoritedFishUUID then 
+        print("⚠️ Invalid UUID or same as last favorited")
+        return false 
+    end
 
+    print("🔧 Attempting to favorite UUID: " .. uuid)
+    
     local RE_FavoriteItem = GetFavoriteRemote()
     if not RE_FavoriteItem then
         print("⚠️ Favorite Remote not found!")
         return false
     end
 
-    pcall(function()
+    local success, result = pcall(function()
         RE_FavoriteItem:FireServer(uuid)
+        print("✅ FireServer called successfully")
+    end)
+    
+    if success then
         LastFavoritedFishUUID = uuid
         LastFavoriteTime = tick()
         print("✅ NikeeHUB: Favorited fish with UUID: " .. tostring(uuid))
-    end)
-    return true
+        return true
+    else
+        print("❌ Error calling FireServer: " .. tostring(result))
+        return false
+    end
 end
 
 local function CheckAndFavoriteFishByMutation()
     if not FavoriteByMutationEnabled or SelectedMutation == "None" or SelectedMutation == "" then
         return
     end
-    
+
     if tick() - LastFavoriteTime < FavoriteCooldown then
         return
     end
-    
+
     local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
     if not Replion then return end
-    
+
     local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
     if not success or not data or not data.Items then return end
-    
-    for _, item in ipairs(data.Items) do
+
+    print("🔍 NikeeHUB: Checking inventory... Selected Mutation: " .. SelectedMutation)
+    print("📦 Total items in inventory: " .. #data.Items)
+
+    for i, item in ipairs(data.Items) do
         if item and item.UUID and item.Name then
             local itemName = tostring(item.Name)
-            local itemMutation = item.Mutation or item.Variant or "None"
+            -- Cek berbagai kemungkinan field nama mutasi
+            local itemMutation = item.Mutation or item.Variant or item.mutation or item.variant or item.MutationName or item.Type or "None"
             local itemUUID = tostring(item.UUID)
-            
-            if itemMutation == SelectedMutation and itemUUID ~= LastFavoritedFishUUID then
-                local isFavorite = item.IsFavorite or item.Favorited or false
-                
+            local isFavorite = item.IsFavorite or item.Favorited or item.isFavorite or item.favorite or false
+
+            print("  [" .. i .. "] Name: " .. itemName .. " | Mutation: " .. tostring(itemMutation) .. " | UUID: " .. itemUUID .. " | Favorite: " .. tostring(isFavorite))
+
+            if tostring(itemMutation) == SelectedMutation and itemUUID ~= LastFavoritedFishUUID then
                 if not isFavorite then
-                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. itemName)
-                    FavoriteFishByUUID(itemUUID)
+                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. itemName .. " (UUID: " .. itemUUID .. ")")
+                    local result = FavoriteFishByUUID(itemUUID)
+                    print("📌 Favorite result: " .. tostring(result))
                     return
+                else
+                    print("✓ Fish already favorited: " .. itemName)
                 end
             end
         end
@@ -2971,8 +3004,9 @@ local function StartFavoriteByMutationWatcher()
         FavoriteByMutationConnection:Disconnect()
         FavoriteByMutationConnection = nil
     end
-    
+
     if FavoriteByMutationEnabled and SelectedMutation ~= "None" and SelectedMutation ~= "" then
+        print("🚀 NikeeHUB: Starting Favorite By Mutasi watcher for: " .. SelectedMutation)
         FavoriteByMutationConnection = RunService.RenderStepped:Connect(function()
             if not ScriptActive then return end
             CheckAndFavoriteFishByMutation()
