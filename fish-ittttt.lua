@@ -2291,10 +2291,15 @@ DebugBtn.MouseButton1Click:Connect(function()
                     print("  UUID = " .. tostring(item.UUID))
                     print("  Favorited = " .. tostring(item.Favorited))
                     if type(item.Metadata) == "table" then
-                        print("  Metadata:")
+                        print("  Metadata (FULL):")
                         for k, v in pairs(item.Metadata) do
-                            print("    " .. tostring(k) .. " = " .. tostring(v))
+                            print("    " .. tostring(k) .. " = " .. tostring(v) .. " [" .. typeof(v) .. "]")
                         end
+                        -- Khusus untuk item yang punya mutasi (dari screenshot ada Midnight dan Ghost)
+                        local mut = item.Metadata.Mutation or item.Metadata.mutation or item.Metadata.Variant or item.Metadata.variant
+                        print("  >>> Mutation field check: " .. tostring(mut))
+                    else
+                        print("  Metadata = " .. tostring(item.Metadata) .. " [" .. typeof(item.Metadata) .. "]")
                     end
                 end
             end
@@ -2309,16 +2314,24 @@ end)
 local MutationList = {}
 local SelectedMutation = "None"
 local FavoriteByMutationEnabled = false
+local MutationIdMap = {} -- Map mutation name to Id
 
 local function GetMutationList()
     local mutations = {}
     local variantsFolder = ReplicatedStorage:FindFirstChild("Variants")
     if variantsFolder then
         for _, child in ipairs(variantsFolder:GetChildren()) do
-            if child:IsA("ModuleScript") or child:IsA("StringValue") or child:IsA("Configuration") then
-                local mutationName = child.Name
-                if mutationName ~= "None" and mutationName ~= "" then
-                    table.insert(mutations, mutationName)
+            if child:IsA("ModuleScript") then
+                local success, data = pcall(function()
+                    local module = require(child)
+                    if module and module.Data then
+                        return module.Data.Name, module.Data.Id
+                    end
+                    return nil, nil
+                end)
+                if success and data and data ~= "None" and data ~= "" then
+                    table.insert(mutations, data)
+                    MutationIdMap[data] = child.Name -- Map name to script name/Id
                 end
             end
         end
@@ -2329,6 +2342,7 @@ local function GetMutationList()
 end
 
 MutationList = GetMutationList()
+print("✅ Loaded " .. #MutationList - 1 .. " mutations from Variants folder")
 
 CreateDropdown(Page_Automation, "Select Mutation", MutationList, "None", function(v)
     SelectedMutation = v
@@ -2348,6 +2362,7 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
         -- Auto dump inventory when enabling
         print("\n========== FAVORITE BY MUTASI ENABLED ==========")
         print("Selected Mutation: " .. SelectedMutation)
+        print("MutationIdMap entries: " .. #MutationIdMap)
         local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
         if Replion then
             local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
@@ -2361,7 +2376,15 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
                         
                         if type(metadata) == "table" then
                             itemName = metadata.Name or metadata.name or metadata.ItemName or tostring(item.Id)
-                            itemMut = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or "None"
+                            
+                            local mutData = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type
+                            if type(mutData) == "table" then
+                                itemMut = mutData.Name or mutData.name or mutData.Type or "None"
+                            elseif type(mutData) == "number" then
+                                itemMut = tostring(mutData) .. " (Id)"
+                            elseif mutData then
+                                itemMut = tostring(mutData)
+                            end
                         else
                             itemName = tostring(item.Id)
                         end
@@ -3046,7 +3069,6 @@ local function CheckAndFavoriteFishByMutation()
 
     for i, item in ipairs(data.Items) do
         if item and item.UUID then
-            -- Get data from Metadata table if it exists
             local metadata = item.Metadata
             local itemName = "Unknown"
             local itemMutation = "None"
@@ -3054,7 +3076,24 @@ local function CheckAndFavoriteFishByMutation()
             -- Try to get name and mutation from metadata
             if type(metadata) == "table" then
                 itemName = metadata.Name or metadata.name or metadata.ItemName or metadata.itemName or tostring(item.Id)
-                itemMutation = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or metadata.type or "None"
+                
+                -- Mutation can be stored as Name, Id, or nested table
+                local mutData = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or metadata.type
+                
+                if type(mutData) == "table" then
+                    -- Mutation is a table with Name field
+                    itemMutation = mutData.Name or mutData.name or mutData.Type or "None"
+                elseif type(mutData) == "number" then
+                    -- Mutation is an Id, need to find the name
+                    for mutName, mutId in pairs(MutationIdMap) do
+                        if tostring(mutId) == tostring(mutData) or mutId == tostring(mutData) then
+                            itemMutation = mutName
+                            break
+                        end
+                    end
+                elseif mutData then
+                    itemMutation = tostring(mutData)
+                end
             else
                 itemName = tostring(item.Id)
             end
