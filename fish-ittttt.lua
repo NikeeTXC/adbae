@@ -2264,6 +2264,42 @@ do
     lbl.TextXAlignment = "Left"
 end
 
+-- Debug button to dump inventory data
+local DebugBtn = Instance.new("TextButton", Page_Automation)
+DebugBtn.BackgroundColor3 = Theme.Error
+DebugBtn.Size = UDim2.new(1, -5, 0, 36)
+DebugBtn.BorderSizePixel = 0
+Instance.new("UICorner", DebugBtn).CornerRadius = UDim.new(0, 6)
+AddStroke(DebugBtn, Theme.Border, 1)
+DebugBtn.Font = Enum.Font.GothamBold
+DebugBtn.Text = "📋 DUMP INVENTORY DATA (Check Console)"
+DebugBtn.TextColor3 = Color3.new(1, 1, 1)
+DebugBtn.TextSize = 11
+Instance.new("UICorner", DebugBtn).CornerRadius = UDim.new(0, 4)
+
+DebugBtn.MouseButton1Click:Connect(function()
+    print("\n========== INVENTORY DATA DUMP ==========")
+    local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
+    if Replion then
+        local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
+        if success and data and data.Items then
+            print("📦 Total Items: " .. #data.Items)
+            for i, item in ipairs(data.Items) do
+                if item then
+                    print("\n--- Item #" .. i .. " ---")
+                    for k, v in pairs(item) do
+                        print("  " .. tostring(k) .. " = " .. tostring(v) .. " (" .. typeof(v) .. ")")
+                    end
+                end
+            end
+        else
+            print("❌ Failed to get inventory data")
+        end
+    end
+    print("========== END DUMP ==========\n")
+    ShowNotification("Check console for inventory dump!", false)
+end)
+
 local MutationList = {}
 local SelectedMutation = "None"
 local FavoriteByMutationEnabled = false
