@@ -2287,8 +2287,14 @@ DebugBtn.MouseButton1Click:Connect(function()
             for i, item in ipairs(data.Items) do
                 if item then
                     print("\n--- Item #" .. i .. " ---")
-                    for k, v in pairs(item) do
-                        print("  " .. tostring(k) .. " = " .. tostring(v) .. " (" .. typeof(v) .. ")")
+                    print("  Id = " .. tostring(item.Id))
+                    print("  UUID = " .. tostring(item.UUID))
+                    print("  Favorited = " .. tostring(item.Favorited))
+                    if type(item.Metadata) == "table" then
+                        print("  Metadata:")
+                        for k, v in pairs(item.Metadata) do
+                            print("    " .. tostring(k) .. " = " .. tostring(v))
+                        end
                     end
                 end
             end
@@ -2348,10 +2354,20 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
             if success and data and data.Items then
                 print("📦 Total Items: " .. #data.Items)
                 for i, item in ipairs(data.Items) do
-                    if item and item.Name then
-                        local itemMut = item.Mutation or item.Variant or item.mutation or item.variant or item.Type or item.rarity or "UNKNOWN"
-                        local itemFav = item.IsFavorite or item.Favorited or item.isFavorite or item.favorite or false
-                        print("  [" .. i .. "] " .. tostring(item.Name) .. " | Mut: " .. tostring(itemMut) .. " | Fav: " .. tostring(itemFav))
+                    if item and item.UUID then
+                        local metadata = item.Metadata
+                        local itemName = "Unknown"
+                        local itemMut = "None"
+                        
+                        if type(metadata) == "table" then
+                            itemName = metadata.Name or metadata.name or metadata.ItemName or tostring(item.Id)
+                            itemMut = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or "None"
+                        else
+                            itemName = tostring(item.Id)
+                        end
+                        
+                        local itemFav = item.Favorited or item.favorited or false
+                        print("  [" .. i .. "] " .. tostring(itemName) .. " | Mut: " .. tostring(itemMut) .. " | Fav: " .. tostring(itemFav))
                     end
                 end
             end
@@ -3028,27 +3044,37 @@ local function CheckAndFavoriteFishByMutation()
     local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
     if not success or not data or not data.Items then return end
 
-    print("🔍 NikeeHUB: Checking inventory... Selected Mutation: " .. SelectedMutation)
-    print("📦 Total items in inventory: " .. #data.Items)
-
     for i, item in ipairs(data.Items) do
-        if item and item.UUID and item.Name then
-            local itemName = tostring(item.Name)
-            -- Cek berbagai kemungkinan field nama mutasi
-            local itemMutation = item.Mutation or item.Variant or item.mutation or item.variant or item.MutationName or item.Type or "None"
+        if item and item.UUID then
+            -- Get data from Metadata table if it exists
+            local metadata = item.Metadata
+            local itemName = "Unknown"
+            local itemMutation = "None"
+            
+            -- Try to get name and mutation from metadata
+            if type(metadata) == "table" then
+                itemName = metadata.Name or metadata.name or metadata.ItemName or metadata.itemName or tostring(item.Id)
+                itemMutation = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or metadata.type or "None"
+            else
+                itemName = tostring(item.Id)
+            end
+            
             local itemUUID = tostring(item.UUID)
-            local isFavorite = item.IsFavorite or item.Favorited or item.isFavorite or item.favorite or false
+            local isFavorite = item.Favorited or item.favorited or false
 
-            print("  [" .. i .. "] Name: " .. itemName .. " | Mutation: " .. tostring(itemMutation) .. " | UUID: " .. itemUUID .. " | Favorite: " .. tostring(isFavorite))
+            -- Debug logging (only print first few items to avoid spam)
+            if i <= 3 then
+                print("  [" .. i .. "] Name: " .. tostring(itemName) .. " | Mutation: " .. tostring(itemMutation) .. " | UUID: " .. itemUUID .. " | Favorite: " .. tostring(isFavorite))
+            end
 
             if tostring(itemMutation) == SelectedMutation and itemUUID ~= LastFavoritedFishUUID then
                 if not isFavorite then
-                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. itemName .. " (UUID: " .. itemUUID .. ")")
+                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. tostring(itemName) .. " (UUID: " .. itemUUID .. ")")
                     local result = FavoriteFishByUUID(itemUUID)
                     print("📌 Favorite result: " .. tostring(result))
                     return
                 else
-                    print("✓ Fish already favorited: " .. itemName)
+                    print("✓ Fish already favorited: " .. tostring(itemName))
                 end
             end
         end
