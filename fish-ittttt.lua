@@ -2290,16 +2290,19 @@ DebugBtn.MouseButton1Click:Connect(function()
                     print("  Id = " .. tostring(item.Id))
                     print("  UUID = " .. tostring(item.UUID))
                     print("  Favorited = " .. tostring(item.Favorited))
+                    print("  Metadata type = " .. typeof(item.Metadata))
                     if type(item.Metadata) == "table" then
-                        print("  Metadata (FULL):")
+                        print("  Metadata keys:")
                         for k, v in pairs(item.Metadata) do
-                            print("    " .. tostring(k) .. " = " .. tostring(v) .. " [" .. typeof(v) .. "]")
+                            if type(v) == "table" then
+                                print("    " .. tostring(k) .. " = table:")
+                                for k2, v2 in pairs(v) do
+                                    print("      " .. tostring(k2) .. " = " .. tostring(v2) .. " [" .. typeof(v2) .. "]")
+                                end
+                            else
+                                print("    " .. tostring(k) .. " = " .. tostring(v) .. " [" .. typeof(v) .. "]")
+                            end
                         end
-                        -- Khusus untuk item yang punya mutasi (dari screenshot ada Midnight dan Ghost)
-                        local mut = item.Metadata.Mutation or item.Metadata.mutation or item.Metadata.Variant or item.Metadata.variant
-                        print("  >>> Mutation field check: " .. tostring(mut))
-                    else
-                        print("  Metadata = " .. tostring(item.Metadata) .. " [" .. typeof(item.Metadata) .. "]")
                     end
                 end
             end
@@ -2307,7 +2310,28 @@ DebugBtn.MouseButton1Click:Connect(function()
             print("❌ Failed to get inventory data")
         end
     end
-    print("========== END DUMP ==========\n")
+    
+    -- Also try to read from PlayerGui Inventory UI
+    print("\n========== PLAYERGUI INVENTORY DUMP ==========")
+    local playerGui = Players.LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        local inv = playerGui:FindFirstChild("Inventory")
+        if inv then
+            print("✓ Inventory UI found!")
+            -- Try to find fish data
+            for _, child in ipairs(inv:GetDescendants()) do
+                if child:IsA("TextLabel") or child:IsA("TextButton") then
+                    local text = child.Text
+                    if text and text:find("Midnight") or text:find("Ghost") or text:find("Bandit") then
+                        print("  Found: " .. text .. " (Parent: " .. child.Parent.Name .. ")")
+                    end
+                end
+            end
+        else
+            print("✗ Inventory UI not found (open inventory first!)")
+        end
+    end
+    print("================================================\n")
     ShowNotification("Check console for inventory dump!", false)
 end)
 
@@ -2359,46 +2383,22 @@ CreateToggle(Page_Automation, "Enable Favorite By Mutasi", "FavoriteByMutationEn
             return
         end
         
-        -- Auto dump inventory when enabling
+        -- Update favorite mutation list
+        FavoriteMutationList = {SelectedMutation}
         print("\n========== FAVORITE BY MUTASI ENABLED ==========")
         print("Selected Mutation: " .. SelectedMutation)
-        print("MutationIdMap entries: " .. #MutationIdMap)
-        local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
-        if Replion then
-            local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
-            if success and data and data.Items then
-                print("📦 Total Items: " .. #data.Items)
-                for i, item in ipairs(data.Items) do
-                    if item and item.UUID then
-                        local metadata = item.Metadata
-                        local itemName = "Unknown"
-                        local itemMut = "None"
-                        
-                        if type(metadata) == "table" then
-                            itemName = metadata.Name or metadata.name or metadata.ItemName or tostring(item.Id)
-                            
-                            local mutData = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type
-                            if type(mutData) == "table" then
-                                itemMut = mutData.Name or mutData.name or mutData.Type or "None"
-                            elseif type(mutData) == "number" then
-                                itemMut = tostring(mutData) .. " (Id)"
-                            elseif mutData then
-                                itemMut = tostring(mutData)
-                            end
-                        else
-                            itemName = tostring(item.Id)
-                        end
-                        
-                        local itemFav = item.Favorited or item.favorited or false
-                        print("  [" .. i .. "] " .. tostring(itemName) .. " | Mut: " .. tostring(itemMut) .. " | Fav: " .. tostring(itemFav))
-                    end
-                end
-            end
-        end
+        
+        -- Get mutation Id for debugging
+        local mutId = GetMutationIdByName(SelectedMutation)
+        print("Mutation Id: " .. tostring(mutId))
+        
+        StartFavoriteByMutationWatcher()
         print("================================================\n")
         
         ShowNotification("Favorite By Mutasi Enabled: " .. SelectedMutation, false)
     else
+        StopFavoriteByMutationWatcher()
+        FavoriteMutationList = {}
         ShowNotification("Favorite By Mutasi Disabled", false)
     end
 end)
@@ -3000,6 +3000,7 @@ local FavoriteByMutationConnection = nil
 local LastFavoritedFishUUID = nil
 local LastFavoriteTime = 0
 local FavoriteCooldown = 0.5 -- 0.5 seconds cooldown for faster response
+local FavoriteMutationList = {} -- List of mutation names to favorite
 
 local function GetFavoriteRemote()
     local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
@@ -3009,13 +3010,20 @@ local function GetFavoriteRemote()
             print("✅ Favorite Remote found: " .. remote:GetFullName())
         else
             print("⚠️ RE/FavoriteItem not found in net path")
-            -- List semua remote yang ada untuk debug
-            print("📋 Available remotes in net:")
-            for _, child in ipairs(netPath:GetChildren()) do
-                if child.Name:lower():find("favorite") then
-                    print("   - " .. child.Name .. " (" .. child.ClassName .. ")")
-                end
-            end
+        end
+        return remote
+    end
+    return nil
+end
+
+local function GetNotificationRemote()
+    local netPath = ReplicatedStorage:WaitForChild("Packages", 5):WaitForChild("_Index", 5):WaitForChild("sleitnick_net@0.2.0", 5):WaitForChild("net", 5)
+    if netPath then
+        local remote = netPath:FindFirstChild("RE/ObtainedNewFishNotification")
+        if remote then
+            print("✅ Notification Remote found: " .. remote:GetFullName())
+        else
+            print("⚠️ RE/ObtainedNewFishNotification not found")
         end
         return remote
     end
@@ -3024,21 +3032,16 @@ end
 
 local function FavoriteFishByUUID(uuid)
     if not uuid or uuid == LastFavoritedFishUUID then 
-        print("⚠️ Invalid UUID or same as last favorited")
         return false 
     end
 
-    print("🔧 Attempting to favorite UUID: " .. uuid)
-    
     local RE_FavoriteItem = GetFavoriteRemote()
     if not RE_FavoriteItem then
-        print("⚠️ Favorite Remote not found!")
         return false
     end
 
-    local success, result = pcall(function()
+    local success = pcall(function()
         RE_FavoriteItem:FireServer(uuid)
-        print("✅ FireServer called successfully")
     end)
     
     if success then
@@ -3047,74 +3050,61 @@ local function FavoriteFishByUUID(uuid)
         print("✅ NikeeHUB: Favorited fish with UUID: " .. tostring(uuid))
         return true
     else
-        print("❌ Error calling FireServer: " .. tostring(result))
+        print("❌ Error favoriting fish")
         return false
     end
 end
 
-local function CheckAndFavoriteFishByMutation()
-    if not FavoriteByMutationEnabled or SelectedMutation == "None" or SelectedMutation == "" then
-        return
+local MutationNameToIdMap = {} -- Cache mutation name to Id mapping
+
+local function GetMutationIdByName(mutationName)
+    -- Check cache first
+    if MutationNameToIdMap[mutationName] then
+        return MutationNameToIdMap[mutationName]
     end
-
-    if tick() - LastFavoriteTime < FavoriteCooldown then
-        return
-    end
-
-    local Replion = require(ReplicatedStorage.Packages.Replion).Client:WaitReplion("Data", 2)
-    if not Replion then return end
-
-    local success, data = pcall(function() return Replion:GetExpect("Inventory") end)
-    if not success or not data or not data.Items then return end
-
-    for i, item in ipairs(data.Items) do
-        if item and item.UUID then
-            local metadata = item.Metadata
-            local itemName = "Unknown"
-            local itemMutation = "None"
-            
-            -- Try to get name and mutation from metadata
-            if type(metadata) == "table" then
-                itemName = metadata.Name or metadata.name or metadata.ItemName or metadata.itemName or tostring(item.Id)
-                
-                -- Mutation can be stored as Name, Id, or nested table
-                local mutData = metadata.Mutation or metadata.mutation or metadata.Variant or metadata.variant or metadata.Type or metadata.type
-                
-                if type(mutData) == "table" then
-                    -- Mutation is a table with Name field
-                    itemMutation = mutData.Name or mutData.name or mutData.Type or "None"
-                elseif type(mutData) == "number" then
-                    -- Mutation is an Id, need to find the name
-                    for mutName, mutId in pairs(MutationIdMap) do
-                        if tostring(mutId) == tostring(mutData) or mutId == tostring(mutData) then
-                            itemMutation = mutName
-                            break
-                        end
+    
+    local variantsFolder = ReplicatedStorage:FindFirstChild("Variants")
+    if variantsFolder then
+        for _, child in ipairs(variantsFolder:GetChildren()) do
+            if child:IsA("ModuleScript") then
+                local success, moduleData = pcall(function()
+                    return require(child)
+                end)
+                if success and moduleData and moduleData.Data then
+                    local name = moduleData.Data.Name
+                    local id = moduleData.Data.Id
+                    if name and name == mutationName and id then
+                        MutationNameToIdMap[mutationName] = id
+                        return id
                     end
-                elseif mutData then
-                    itemMutation = tostring(mutData)
                 end
-            else
-                itemName = tostring(item.Id)
             end
-            
-            local itemUUID = tostring(item.UUID)
-            local isFavorite = item.Favorited or item.favorited or false
+        end
+    end
+    return nil
+end
 
-            -- Debug logging (only print first few items to avoid spam)
-            if i <= 3 then
-                print("  [" .. i .. "] Name: " .. tostring(itemName) .. " | Mutation: " .. tostring(itemMutation) .. " | UUID: " .. itemUUID .. " | Favorite: " .. tostring(isFavorite))
-            end
+local function OnFishObtained(fishId, weight, inventoryItem)
+    if not FavoriteByMutationEnabled or #FavoriteMutationList == 0 then
+        return
+    end
 
-            if tostring(itemMutation) == SelectedMutation and itemUUID ~= LastFavoritedFishUUID then
-                if not isFavorite then
-                    print("🎯 NikeeHUB: Found fish matching mutation '" .. SelectedMutation .. "': " .. tostring(itemName) .. " (UUID: " .. itemUUID .. ")")
-                    local result = FavoriteFishByUUID(itemUUID)
-                    print("📌 Favorite result: " .. tostring(result))
-                    return
-                else
-                    print("✓ Fish already favorited: " .. tostring(itemName))
+    -- Get mutation data from inventoryItem
+    local variantId = nil
+    if inventoryItem and inventoryItem.Metadata and inventoryItem.Metadata.VariantId then
+        variantId = inventoryItem.Metadata.VariantId
+    end
+
+    if variantId then
+        -- Check if this mutation is in our favorite list
+        for _, mutName in ipairs(FavoriteMutationList) do
+            local expectedId = GetMutationIdByName(mutName)
+            if expectedId and tostring(variantId) == tostring(expectedId) then
+                print("🎯 NikeeHUB: Fish with mutation '" .. mutName .. "' detected! VariantId: " .. tostring(variantId))
+                if inventoryItem and inventoryItem.UUID then
+                    FavoriteFishByUUID(inventoryItem.UUID)
                 end
+                return
             end
         end
     end
@@ -3126,13 +3116,14 @@ local function StartFavoriteByMutationWatcher()
         FavoriteByMutationConnection = nil
     end
 
-    if FavoriteByMutationEnabled and SelectedMutation ~= "None" and SelectedMutation ~= "" then
-        print("🚀 NikeeHUB: Starting Favorite By Mutasi watcher for: " .. SelectedMutation)
-        FavoriteByMutationConnection = RunService.RenderStepped:Connect(function()
-            if not ScriptActive then return end
-            CheckAndFavoriteFishByMutation()
-        end)
-        print("✅ NikeeHUB: Started Favorite By Mutasi watcher for: " .. SelectedMutation)
+    if FavoriteByMutationEnabled and #FavoriteMutationList > 0 then
+        local RE_Notification = GetNotificationRemote()
+        if RE_Notification then
+            FavoriteByMutationConnection = RE_Notification.OnClientEvent:Connect(OnFishObtained)
+            print("✅ NikeeHUB: Started Favorite By Mutasi watcher for: " .. table.concat(FavoriteMutationList, ", "))
+        else
+            print("❌ Could not find notification remote!")
+        end
     end
 end
 
@@ -3143,28 +3134,5 @@ local function StopFavoriteByMutationWatcher()
         print("⏹️ NikeeHUB: Stopped Favorite By Mutasi watcher")
     end
 end
-
-task.spawn(function()
-    local lastMutationCheck = ""
-    
-    while ScriptActive do
-        if Settings.FavoriteByMutationEnabled ~= nil then
-            FavoriteByMutationEnabled = Settings.FavoriteByMutationEnabled
-        end
-        
-        if FavoriteByMutationEnabled and SelectedMutation ~= lastMutationCheck then
-            lastMutationCheck = SelectedMutation
-            if SelectedMutation ~= "None" and SelectedMutation ~= "" then
-                StartFavoriteByMutationWatcher()
-            else
-                StopFavoriteByMutationWatcher()
-            end
-        elseif not FavoriteByMutationEnabled then
-            StopFavoriteByMutationWatcher()
-        end
-        
-        task.wait(0.5)
-    end
-end)
 
 print("✅ NikeeHUB System Session v1.0 Loaded!")
