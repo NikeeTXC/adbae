@@ -187,6 +187,8 @@ local FishingAreas = {
     ["Volcano"] = {Pos = Vector3.new(-552.797, 21.174, 186.940), Look = Vector3.new(-0.251, -0.534, -0.808)},
     ["Volcanic Cavern"] = {Pos = Vector3.new(1249.005, 82.830, -10224.920), Look = Vector3.new(-0.649, -0.666, 0.368)},
     ["Heartfelt Island"] = {Pos = Vector3.new(1114.075, 4.846, 2712.839), Look = Vector3.new(0.995, 0.000, -0.103)},
+    ["Heartfelt Cave"] = {Pos = Vector3.new(1284.076, -53.524, 2756.312), Look = Vector3.new(0.643, -0.000, 0.766)},
+    ["Altar Candy Stone"] = {Pos = Vector3.new(1349.109, -51.190, 2752.018), Look = Vector3.new(1.000, -0.000, 0.001)},
 }
 
 local Settings = {
