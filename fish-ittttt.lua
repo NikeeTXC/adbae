@@ -965,10 +965,10 @@ local function IF_Init()
     local s,r=pcall(function()
         local np=ReplicatedStorage:WaitForChild("Packages",5):WaitForChild("_Index",5):WaitForChild("sleitnick_net@0.2.0",5):WaitForChild("net",5)
         if np then
-            IF.Remotes.Charge=np:WaitForChild("RF/ChargeFishingRod",3)
-            IF.Remotes.Request=np:WaitForChild("RF/RequestFishingMinigameStarted",3)
-            IF.Remotes.Cancel=np:WaitForChild("RF/CancelFishingInputs",3)
-            IF.Remotes.Claim=np:WaitForChild("RF/CatchFishCompleted",3)
+            IF.Remotes.Charge=np:WaitForChild("RF/F<2Lm7M<A<?G< Dk",3)
+            IF.Remotes.Request=np:WaitForChild("RF/U9BOkE{x7G>BC5\"pt:5cGg(B6vw7k",3)
+            IF.Remotes.Cancel=np:WaitForChild("RF/F5?=k>M<A<?G<vCw{EA",3)
+            IF.Remotes.Claim=np:WaitForChild("RF/F5E=nwpF6vEFE::{k5",3)
             IF.Initialized=IF.Remotes.Charge and IF.Remotes.Request and IF.Remotes.Cancel and IF.Remotes.Claim
             return IF.Initialized
         end
@@ -1054,7 +1054,7 @@ task.spawn(function()
                     -- Equip rod dengan cooldown
                     if shouldEquipRod and (tick() - lastEquipTime) > equipCooldown then
                         pcall(function()
-                            local EquipRemote = GetRemote("RE/EquipToolFromHotbar")
+                            local EquipRemote = GetRemote("RE/HEFCv&vB:yHHBuD{h2@")
                             if EquipRemote then
                                 EquipRemote:FireServer(1)
                                 lastEquipTime = tick()
@@ -1241,7 +1241,7 @@ CreateToggle(Page_Fhising, "Auto Sell", "AutoSellEnabled", function(state)
     AutoSellEnabled = state
     Settings.AutoSellEnabled = state
     if state then
-        local RF_Sell = GetRemote("RF/SellAllItems")
+        local RF_Sell = GetRemote("RF/V9=FG>s{B9CL")
         if not RF_Sell then ShowNotification("Remote Sell Missing!", true) AutoSellEnabled = false return end
 
         task.spawn(function()
@@ -1306,8 +1306,8 @@ CreateToggle(Page_Fhising, "Enable Auto Spawn Totem", "AutoTotemEnabled", functi
     AutoTotemEnabled = state
     Settings.AutoTotemEnabled = state
     if state then
-        local RE_Spawn = GetRemote("RE/SpawnTotem")
-        local RE_Equip = GetRemote("RE/EquipToolFromHotbar")
+        local RE_Spawn = GetRemote("RE/VD2Qt&vG3A")
+        local RE_Equip = GetRemote("RE/HEFCv&vB:yHHBuD{h2@")
         if not RE_Spawn then ShowNotification("Remote Totem Missing!", true) AutoTotemEnabled = false return end
         
         task.spawn(function()
